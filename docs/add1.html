@@ -212,7 +212,7 @@
   }
 
   async function compute(){
-    try{
+    try {
       refresh();
   
       const p  = +pmtEl.value;
@@ -221,11 +221,18 @@
       const s  = +volEl.value;
       const c  = +convEl.value;
   
-      // R call, converting paths matrix into a list of rows
       const r = await webr.evalR(`
         (function(){
-          out <- uadd1(pmt_real=${p}, nper=${n}, mu_real=${mu}, vol_real=${s},
-                       conv=${c}, n_scen=10000, n_show=10, seed=42)
+          out <- uadd1(
+            pmt_real=${p},
+            nper=${n},
+            mu_real=${mu},
+            vol_real=${s},
+            conv=${c},
+            n_scen=10000,
+            n_show=10,
+            seed=42
+          )
           list(
             t  = out$results$t,
             qW = out$results$quantiles_wealth,
@@ -238,18 +245,19 @@
       let js = await r.toJs();
       if (js && js.type) js = unwrap(js);
   
-      // Helper to normalize WebR outputs to plain arrays
-      const arr = x =>
-        (x && typeof x === "object" && "values" in x)
-          ? x.values.map(Number)
-          : Array.isArray(x)
-            ? x.map(Number)
-            : [];
+      // Safe normalizer: handles WebR vector, array, or single number
+      const arr = x => {
+        if (!x) return [];
+        if (typeof x === "number") return [x];
+        if (Array.isArray(x)) return x.map(Number);
+        if (x.values && Array.isArray(x.values)) return x.values.map(Number);
+        return [];
+      };
   
       const t      = arr(js.t);
       const qW     = arr(js.qW);
       const qP     = arr(js.qP);
-      const paths  = (js.paths || []).map(row => arr(row));
+      const paths  = Array.isArray(js.paths) ? js.paths.map(row => arr(row)) : [];
   
       drawPaths(t, paths);
       renderRow(wealthRow, qW);
@@ -260,6 +268,7 @@
       log("Compute error: " + (e?.message || e));
     }
   }
+
 
     // Event listeners
 
