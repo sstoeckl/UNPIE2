@@ -4,8 +4,10 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>UNPIE2 – Case 8</title>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script type="module" src="https://webr.r-wasm.org/latest/webr.mjs"></script>
+
 <style>
   html,body{height:100%;margin:0}
   body{overflow:hidden;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#fff;color:#111}
@@ -24,102 +26,111 @@
   input[type=range]{width:100%}
   button{padding:.55rem .9rem;border:0;border-radius:10px;background:#eee;cursor:pointer}
   .right{padding:10px;display:flex;flex-direction:column;height:100%;overflow:hidden}
-  .chartWrap{flex:1 0 auto;height:360px}
+  .stats{display:flex;gap:10px;justify-content:center;margin-bottom:8px;flex:0 0 auto}
+  .stat{background:#f7f7f9;border-radius:10px;padding:.45rem .7rem;font-variant-numeric:tabular-nums}
+  .chartWrap{flex:1 0 auto;height:320px}
   #bar{width:100%;height:100%}
-  .legend{display:flex;gap:1rem;justify-content:center;margin-top:6px;color:#666;font-size:.92rem;flex:0 0 auto;flex-wrap:wrap}
+  .legend{display:flex;gap:1rem;justify-content:center;margin-top:6px;color:#666;font-size:.92rem;flex:0 0 auto}
   .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:.35rem;vertical-align:middle}
-  .kpis{display:flex;gap:12px;justify-content:center;margin-top:6px;flex:0 0 auto;flex-wrap:wrap}
-  .kpi{background:#f7f7f9;border-radius:10px;padding:.45rem .7rem;font-variant-numeric:tabular-nums}
   .debug{margin-top:6px;background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;flex:0 0 110px;display:none}
   pre{margin:0;font-size:.82rem}
 </style>
 </head>
 <body>
-<div class="app">
-  <div class="wrap">
-    <div class="title" id="title">App 8: Real yearly spending financed by given (real) yearly savings</div>
-    <div class="grid">
-      <div class="panel left">
-        <div class="group">
-          <h3 id="gPmt">Yearly (real) savings payments</h3>
-          <div class="row">
-            <label for="pmt" style="flex:1" id="lPmt">Payment per year</label>
-            <input id="pmt" type="range" min="10" max="20000" step="10" value="1000">
-            <div class="val" id="pmtLabel">1,000</div>
-          </div>
-        </div>
-        <div class="group">
-          <h3 id="gHorSave">Time horizon for savings (years)</h3>
-          <div class="row">
-            <label for="nSave" style="flex:1" id="lSave">Years</label>
-            <input id="nSave" type="range" min="1" max="50" step="1" value="35">
-            <div class="val" id="nSaveLabel">35</div>
-          </div>
-        </div>
-        <div class="group">
-          <h3 id="gHorSpend">Time horizon for spending (years)</h3>
-          <div class="row">
-            <label for="nSpend" style="flex:1" id="lSpend">Years</label>
-            <input id="nSpend" type="range" min="1" max="50" step="1" value="30">
-            <div class="val" id="nSpendLabel">30</div>
-          </div>
-        </div>
-        <div class="group">
-          <h3 id="gRates">Rates</h3>
-          <div class="row">
-            <label for="rate" style="flex:1" id="lRate">Interest rate</label>
-            <input id="rate" type="range" min="0" max="0.08" step="0.0005" value="0.02">
-            <div class="val" id="rateLabel">2.00%</div>
-          </div>
-          <div class="row">
-            <label for="infl" style="flex:1" id="lInfl">Inflation rate</label>
-            <input id="infl" type="range" min="0" max="0.06" step="0.0005" value="0.01">
-            <div class="val" id="inflLabel">1.00%</div>
-          </div>
-        </div>
-        <button id="compute">Compute</button>
-      </div>
+  <div class="app">
+    <div class="wrap">
+      <div class="title" id="title">App 8: Real yearly spending financed by given (real) yearly savings</div>
 
-      <div class="panel right">
-        <div class="chartWrap"><canvas id="bar"></canvas></div>
-        <div class="legend">
-          <span><span class="dot" style="background:#ff9800"></span><span id="legSave">Yearly (real) savings while working</span></span>
-          <span><span class="dot" style="background:#9e9e9e"></span><span id="legSpend">Yearly (real) spending during retirement</span></span>
+      <div class="grid">
+        <!-- Controls -->
+        <div class="panel left">
+          <div class="group">
+            <h3 id="gPmt">Yearly (real) savings payments</h3>
+            <div class="row">
+              <label for="pmt" style="flex:1" id="lPmt">Payment per year</label>
+              <input id="pmt" type="range" min="10" max="20000" step="10" value="1000">
+              <div class="val" id="pmtLabel">1,000</div>
+            </div>
+          </div>
+
+          <div class="group">
+            <h3 id="gHorSave">Time horizon for savings (years)</h3>
+            <div class="row">
+              <label for="nSave" style="flex:1" id="lSave">Years</label>
+              <input id="nSave" type="range" min="1" max="50" step="1" value="35">
+              <div class="val" id="nSaveLabel">35</div>
+            </div>
+          </div>
+
+          <div class="group">
+            <h3 id="gHorSpend">Time horizon for spending (years)</h3>
+            <div class="row">
+              <label for="nSpend" style="flex:1" id="lSpend">Years</label>
+              <input id="nSpend" type="range" min="1" max="50" step="1" value="30">
+              <div class="val" id="nSpendLabel">30</div>
+            </div>
+          </div>
+
+          <div class="group">
+            <h3 id="gRates">Rates</h3>
+            <div class="row">
+              <label for="rate" style="flex:1" id="lRate">Interest rate</label>
+              <input id="rate" type="range" min="0" max="0.08" step="0.0005" value="0.02">
+              <div class="val" id="rateLabel">2.00%</div>
+            </div>
+            <div class="row">
+              <label for="infl" style="flex:1" id="lInfl">Inflation rate</label>
+              <input id="infl" type="range" min="0" max="0.06" step="0.0005" value="0.01">
+              <div class="val" id="inflLabel">1.00%</div>
+            </div>
+          </div>
+
+          <button id="compute">Compute</button>
         </div>
-        <div class="kpis">
-          <div class="kpi"><strong id="kpiWealthLbl">Future wealth at end of savings phase (real) available to finance (real) yearly spending during retirement:</strong> <span id="wealthOut">—</span></div>
+
+        <!-- Chart & KPIs -->
+        <div class="panel right">
+          <div class="stats">
+            <div class="stat"><strong id="sSave">Yearly savings (real):</strong> <span id="saveOut">—</span></div>
+            <div class="stat"><strong id="sSpend">Yearly spending possible (real):</strong> <span id="spendOut">—</span></div>
+          </div>
+          <div class="chartWrap"><canvas id="bar"></canvas></div>
+          <div class="legend">
+            <span><span class="dot" style="background:#ff9800"></span><span id="legSave">Yearly (real) savings while working</span></span>
+            <span><span class="dot" style="background:#9e9e9e"></span><span id="legSpend">Yearly (real) spending during retirement</span></span>
+          </div>
+          <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
         </div>
-        <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
       </div>
     </div>
   </div>
-</div>
 
 <script type="module">
-  // Params & i18n
+  // URL params
   const params=new URLSearchParams(location.search);
-  const lang =(params.get("lang") || "en_EN").toLowerCase();
+  const lang=(params.get("lang")||"en_EN").toLowerCase();
   const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
 
+  // i18n
   const I18N={
     en_en:{title:"App 8: Real yearly spending financed by given (real) yearly savings",
       gPmt:"Yearly (real) savings payments", lPmt:"Payment per year",
       gHorSave:"Time horizon for savings (years)", lSave:"Years",
       gHorSpend:"Time horizon for spending (years)", lSpend:"Years",
       gRates:"Rates", lRate:"Interest rate", lInfl:"Inflation rate", btn:"Compute",
-      legSave:"Yearly (real) savings while working", legSpend:"Yearly (real) spending during retirement",
-      kpiWealthLbl:"Future wealth at end of savings phase (real) available to finance (real) yearly spending during retirement:"},
+      sSave:"Yearly savings (real):", sSpend:"Yearly spending possible (real):",
+      legSave:"Yearly (real) savings while working", legSpend:"Yearly (real) spending during retirement"},
     de_de:{title:"App 8: Reale jährliche Ausgaben finanziert durch gegebene (reale) jährliche Ersparnisse",
       gPmt:"Jährliche (reale) Sparzahlungen", lPmt:"Zahlung pro Jahr",
       gHorSave:"Sparhorizont (Jahre)", lSave:"Jahre",
       gHorSpend:"Auszahlungshorizont (Jahre)", lSpend:"Jahre",
       gRates:"Sätze", lRate:"Zinssatz", lInfl:"Inflationsrate", btn:"Berechnen",
-      legSave:"Jährliche (reale) Ersparnisse während Erwerbsphase", legSpend:"Jährliche (reale) Ausgaben im Ruhestand",
-      kpiWealthLbl:"Reales Vermögen am Ende der Sparphase zur Finanzierung der (realen) jährlichen Ausgaben im Ruhestand:"}
+      sSave:"Jährliche Ersparnis (real):", sSpend:"Mögliche jährliche Ausgaben (real):",
+      legSave:"Jährliche (reale) Ersparnisse während Erwerbsphase", legSpend:"Jährliche (reale) Ausgaben im Ruhestand"}
   };
   const T=I18N[lang]||I18N.en_en;
-  ["title","gPmt","lPmt","gHorSave","lSave","gHorSpend","lSpend","gRates","lRate","lInfl","legSave","legSpend","kpiWealthLbl"]
-    .forEach(id=>document.getElementById(id).textContent=T[id]);
+  ["title","gPmt","lPmt","gHorSave","lSave","gHorSpend","lSpend","gRates","lRate","lInfl",
+   "sSave","sSpend","legSave","legSpend"].forEach(id=>document.getElementById(id).textContent=T[id]);
   document.getElementById("compute").textContent=T.btn;
   document.getElementById("debugBox").style.display=debug?"block":"none";
 
@@ -129,37 +140,45 @@
         nSpendEl=document.getElementById("nSpend"),
         rateEl=document.getElementById("rate"),
         inflEl=document.getElementById("infl");
-  const pmtLbl=document.getElementById("pmtLabel"),
-        nSaveLbl=document.getElementById("nSaveLabel"),
-        nSpendLbl=document.getElementById("nSpendLabel"),
-        rateLbl=document.getElementById("rateLabel"),
-        inflLbl=document.getElementById("inflLabel");
-  const wealthOut=document.getElementById("wealthOut");
+  const pmtLabel=document.getElementById("pmtLabel"),
+        nSaveLabel=document.getElementById("nSaveLabel"),
+        nSpendLabel=document.getElementById("nSpendLabel"),
+        rateLabel=document.getElementById("rateLabel"),
+        inflLabel=document.getElementById("inflLabel");
+  const saveOut=document.getElementById("saveOut"),
+        spendOut=document.getElementById("spendOut");
   const dbg=document.getElementById("debug");
+
   const fmt=(x,opts={})=>Number(x).toLocaleString(undefined,{maximumFractionDigits:2,...opts});
   const log=x=>{ if(debug) dbg.textContent=typeof x==="string"?x:JSON.stringify(x,null,2); };
-  function refresh(){ pmtLbl.textContent=fmt(pmtEl.value,{maximumFractionDigits:0});
-    nSaveLbl.textContent=parseInt(nSaveEl.value,10);
-    nSpendLbl.textContent=parseInt(nSpendEl.value,10);
-    rateLbl.textContent=(parseFloat(rateEl.value)*100).toFixed(2)+"%";
-    inflLbl.textContent=(parseFloat(inflEl.value)*100).toFixed(2)+"%"; } refresh();
 
-  // Chart: two bars only
+  function refresh(){
+    pmtLabel.textContent=fmt(pmtEl.value,{maximumFractionDigits:0});
+    nSaveLabel.textContent=parseInt(nSaveEl.value,10);
+    nSpendLabel.textContent=parseInt(nSpendEl.value,10);
+    rateLabel.textContent=(parseFloat(rateEl.value)*100).toFixed(2)+"%";
+    inflLabel.textContent=(parseFloat(inflEl.value)*100).toFixed(2)+"%";
+  }
+  refresh();
+
+  // Chart
   const ctx=document.getElementById("bar").getContext("2d");
-  const bar=new Chart(ctx,{type:"bar",data:{labels:["Save","Spend"],datasets:[]},
+  const bar=new Chart(ctx,{type:"bar",
+    data:{labels:["Save","Spend"],datasets:[]},
     options:{
       responsive:true,maintainAspectRatio:false,
       scales:{
-        x:{title:{display:true,text:""}}, 
+        x:{ticks:{autoSkip:false},title:{display:true,text:""}},
         y:{beginAtZero:true,title:{display:true,text:"Value"},ticks:{callback:v=>fmt(v)}}
       },
-      plugins:{legend:{display:false}}
+      plugins:{legend:{display:false}},
+      datasets:{bar:{grouped:false,barPercentage:0.95,categoryPercentage:1.0}}
     }});
 
-  function drawChart(saveReal, spendReal) {
+  function drawChart(saveReal, spendReal){
     bar.data.labels=[T.legSave, T.legSpend];
     bar.data.datasets=[
-      { label:"Save",  data:[saveReal, null], backgroundColor:"#ff9800" },
+      { label:"Save",  data:[saveReal, null],  backgroundColor:"#ff9800" },
       { label:"Spend", data:[null, spendReal], backgroundColor:"#9e9e9e" }
     ];
     bar.update();
@@ -168,8 +187,10 @@
   // WebR
   import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
   const webr=new WebR();
-  function unwrap(x){ if(x==null||typeof x!=="object")return x; if(x.type==="list"){const o={};(x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i]));return o;}
-    if(Array.isArray(x.values)) return x.values.length===1?unwrap(x.values[0]):x.values.map(unwrap); return x; }
+  function unwrap(x){ if(x==null||typeof x!=="object")return x;
+    if(x.type==="list"){const o={};(x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i]));return o;}
+    if(Array.isArray(x.values))return x.values.length===1?unwrap(x.values[0]):x.values.map(unwrap);
+    return x; }
   const num=x=>typeof x==="number"?x:(x&&x.values?x.values[0]:Array.isArray(x)?x[0]:NaN);
 
   async function init(){
@@ -188,11 +209,11 @@
       const res=await webr.evalR(`ucase8(pmt_real_save=${p}, nper_save=${ns}, nper_spend=${np}, rate=${r}, inflation=${i})`);
       let js=await res.toJs(); if(js&&js.type) js=unwrap(js);
       const R=js.results||{};
-      const wealth=num(R.fv_real_at_retirement);
-      const spend =num(R.spend_real_during_retirement);
+      const spendReal = num(R.spend_real_during_retirement);
 
-      wealthOut.textContent = fmt(wealth);
-      drawChart(p, spend);
+      saveOut.textContent  = fmt(p,{maximumFractionDigits:2});
+      spendOut.textContent = fmt(spendReal,{maximumFractionDigits:2});
+      drawChart(p, spendReal);
       log(js);
     }catch(e){ log("Compute error: "+(e?.message||e)); }
   }
