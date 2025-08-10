@@ -47,11 +47,10 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 <script type="module">
-  // ===== Helpers / UI refs
   const out = document.getElementById("out");
   const fvSpan = document.getElementById("fv");
   const ctx = document.getElementById("chart").getContext("2d");
-  let chart; // Chart.js instance
+  let chart;
 
   function log(msg, obj) {
     out.textContent =
@@ -59,11 +58,10 @@
       (obj ? "\n" + JSON.stringify(obj, null, 2) : "");
   }
 
-  // ===== WebR
   import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
   const webR = new WebR();
 
-  // unwrap {type,names,values} → plain JS
+  // unwrap WebR objects → plain JS
   function unwrap(x) {
     if (x == null || typeof x !== "object") return x;
     if (x.type === "list") {
@@ -77,6 +75,12 @@
     return x;
   }
 
+  function buildPathFromInputs(rate, nper, pv) {
+    const t = Array.from({ length: nper + 1 }, (_, i) => i);
+    const path = t.map(i => pv * Math.pow(1 + rate, i));  // positive FV path
+    return { t, path, fv: path[path.length - 1] };
+  }
+
   async function init() {
     log("Starting WebR…");
     await webR.init();
@@ -86,36 +90,23 @@
     await webR.evalR(code);
     log("WebR ready. ucase1() loaded.");
 
-    // init empty chart
     chart = new Chart(ctx, {
       type: "line",
-      data: {
-        labels: [],
-        datasets: [{
-          label: "Future Value path",
-          data: [],
-          tension: 0.15,
-          pointRadius: 0
-        }]
-      },
+      data: { labels: [], datasets: [{ label: "Future Value path", data: [], tension: 0.15, pointRadius: 0 }] },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         scales: {
           x: { title: { display: true, text: "Period (t)" } },
           y: { title: { display: true, text: "Value" }, ticks: { callback: v => v.toLocaleString() } }
         },
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: c => ` ${c.parsed.y.toLocaleString(undefined,{maximumFractionDigits:2})}` } }
-        }
+        plugins: { legend: { display: false } }
       }
     });
   }
 
-  function updateChart(t, fvPath) {
+  function updateChart(t, path) {
     chart.data.labels = t;
-    chart.data.datasets[0].data = fvPath;
+    chart.data.datasets[0].data = path;
     chart.update();
   }
 
@@ -129,14 +120,18 @@
       const raw  = await rObj.toJs();
       const js   = unwrap(raw);
 
-      const fv = js?.results?.fv;
-      const t = js?.results?.t?.values ?? js?.results?.t; // defensive
-      const path = js?.results?.fv_path?.values ?? js?.results?.fv_path;
+      // Try to read R-provided path; otherwise build it from inputs
+      const fvFromR  = js?.results?.fv;
+      const tFromR   = js?.results?.t?.values ?? js?.results?.t;
+      const pathFromR= js?.results?.fv_path?.values ?? js?.results?.fv_path;
 
-      if (typeof fv !== "number" || !Array.isArray(path)) {
-        log("Unexpected result shape from R:", js);
-        fvSpan.textContent = "n/a";
-        return;
+      let fv, t, path;
+      if (Array.isArray(tFromR) && Array.isArray(pathFromR)) {
+        fv   = typeof fvFromR === "number" ? fvFromR : pathFromR[pathFromR.length - 1];
+        t    = tFromR;
+        path = pathFromR;
+      } else {
+        ({ fv, t, path } = buildPathFromInputs(rate, nper, pv));
       }
 
       fvSpan.textContent = fv.toFixed(2);
@@ -152,5 +147,6 @@
   await init();
   await runOnce();
 </script>
+
 </body>
 </html>
