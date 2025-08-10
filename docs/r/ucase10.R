@@ -11,7 +11,7 @@
 # with m chosen so that E[gross] = 1 + mu_real  => m = log(1 + mu_real) - 0.5*vol_real^2
 # Wealth recursion (end-of-period contributions):
 #   W_t = W_{t-1} * gross_t + pmt_real ,  W_0 = 0
-uadd1 <- function(pmt_real, nper, mu_real, vol_real, conv,
+ucase10 <- function(pmt_real, nper, mu_real, vol_real, conv,
                   n_scen = 10000L, n_show = 10L, seed = NULL) {
   stopifnot(is.numeric(pmt_real), is.numeric(nper),
             is.numeric(mu_real), is.numeric(vol_real), is.numeric(conv))
