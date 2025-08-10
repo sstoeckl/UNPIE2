@@ -4,10 +4,8 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>UNPIE2 – Case 4</title>
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script type="module" src="https://webr.r-wasm.org/latest/webr.mjs"></script>
-
 <style>
   html,body{height:100%;margin:0}
   body{overflow:hidden;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#fff;color:#111}
@@ -25,7 +23,6 @@
   .val{width:7rem;text-align:right;color:#666;font-variant-numeric:tabular-nums}
   input[type=range]{width:100%}
   button{padding:.55rem .9rem;border:0;border-radius:10px;background:#eee;cursor:pointer}
-
   .right{padding:10px;display:flex;flex-direction:column;height:100%;overflow:hidden}
   .chartWrap{flex:1 0 auto;height:360px}
   #bar{width:100%;height:100%}
@@ -43,7 +40,6 @@
       <div class="title" id="title">App 4: Future value (nominal & real) of nominally constant periodic payments</div>
 
       <div class="grid">
-        <!-- Controls -->
         <div class="panel left">
           <div class="group">
             <h3 id="gPmt">Periodic payments</h3>
@@ -80,7 +76,6 @@
           <button id="compute">Compute</button>
         </div>
 
-        <!-- Chart & KPIs -->
         <div class="panel right">
           <div class="chartWrap"><canvas id="bar"></canvas></div>
           <div class="legend">
@@ -100,201 +95,98 @@
     </div>
   </div>
 
-  <script type="module">
-    // ---- URL params
-    const params = new URLSearchParams(location.search);
-    const lang = (params.get("lang") || "en_EN").toLowerCase();
-    const debug = (params.get("debug") || "FALSE").toUpperCase() === "TRUE";
+<script type="module">
+  const params=new URLSearchParams(location.search);
+  const lang=(params.get("lang")||"en_EN").toLowerCase();
+  const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
 
-    // ---- i18n
-    const I18N = {
-      en_en: {
-        title: "App 4: Future value (nominal & real) of nominally constant periodic payments",
-        gPmt: "Periodic payments", lPmt: "Payment per year",
-        gHor: "Time horizon (years)", lYears: "Years",
-        gRates: "Rates", lRate: "Interest rate", lInfl: "Inflation rate",
-        btn: "Compute",
-        legPmt: "Periodic payment",
-        legSum: "Sum of periodic payments (nominal)",
-        legFVNom: "Future value (nominal)",
-        legFVReal: "Future value (real)",
-        kpiSumLbl: "Sum of periodic payments (nominal):",
-        kpiFvNomLbl: "Future value (nominal):",
-        kpiFvRealLbl: "Future value (real):"
+  const I18N={
+    en_en:{title:"App 4: Future value (nominal & real) of nominally constant periodic payments",
+      gPmt:"Periodic payments",lPmt:"Payment per year",gHor:"Time horizon (years)",lYears:"Years",
+      gRates:"Rates",lRate:"Interest rate",lInfl:"Inflation rate",btn:"Compute",
+      legPmt:"Periodic payment",legSum:"Sum of periodic payments (nominal)",
+      legFVNom:"Future value (nominal)",legFVReal:"Future value (real)",
+      kpiSumLbl:"Sum of periodic payments (nominal):",kpiFvNomLbl:"Future value (nominal):",kpiFvRealLbl:"Future value (real):"},
+    de_de:{title:"App 4: Zukünftiger Wert (nominal und real) von nominell konstanten periodischen Sparzahlungen",
+      gPmt:"Periodische Sparzahlungen",lPmt:"Sparzahlung pro Jahr",gHor:"Zeitraum (Jahre)",lYears:"Jahre",
+      gRates:"Sätze",lRate:"Zinssatz",lInfl:"Inflationsrate",btn:"Berechnen",
+      legPmt:"Periodische Sparzahlung",legSum:"Summe der periodischen Sparzahlungen (nominal)",
+      legFVNom:"Zukünftiger Wert (nominal)",legFVReal:"Zukünftiger Wert (real)",
+      kpiSumLbl:"Summe der periodischen Sparzahlungen (nominal):",kpiFvNomLbl:"Zukünftiger Wert (nominal):",kpiFvRealLbl:"Zukünftiger Wert (real):"}
+  };
+  const T=I18N[lang]||I18N.en_en;
+  ["title","gPmt","lPmt","gHor","lYears","gRates","lRate","lInfl","legPmt","legSum","legFVNom","legFVReal","kpiSumLbl","kpiFvNomLbl","kpiFvRealLbl"]
+    .forEach(id=>document.getElementById(id).textContent=T[id]);
+  document.getElementById("compute").textContent=T.btn;
+  document.getElementById("debugBox").style.display=debug?"block":"none";
+
+  const pmtEl=document.getElementById("pmt"), nperEl=document.getElementById("nper"), rateEl=document.getElementById("rate"), inflEl=document.getElementById("infl");
+  const pmtLabel=document.getElementById("pmtLabel"), nperLabel=document.getElementById("nperLabel"), rateLabel=document.getElementById("rateLabel"), inflLabel=document.getElementById("inflLabel");
+  const sumOut=document.getElementById("sumOut"), fvNomOut=document.getElementById("fvNomOut"), fvRealOut=document.getElementById("fvRealOut"), dbg=document.getElementById("debug");
+  const fmt=(x,opts={})=>Number(x).toLocaleString(undefined,{maximumFractionDigits:2,...opts});
+  const log=x=>{ if(debug) dbg.textContent=typeof x==="string"?x:JSON.stringify(x,null,2); };
+  function refresh(){ pmtLabel.textContent=fmt(pmtEl.value,{maximumFractionDigits:0}); nperLabel.textContent=parseInt(nperEl.value,10);
+    rateLabel.textContent=(parseFloat(rateEl.value)*100).toFixed(2)+"%"; inflLabel.textContent=(parseFloat(inflEl.value)*100).toFixed(2)+"%"; } refresh();
+
+  // chart
+  let xBase=0, xTotal=0;
+  const ctx=document.getElementById("bar").getContext("2d");
+  const bar=new Chart(ctx,{type:"bar",data:{labels:[],datasets:[]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      scales:{
+        x:{ticks:{autoSkip:false,callback:function(value){ if(value<xBase) return this.getLabelForValue(value); return value===(xTotal-1)?"T":""; }},
+           title:{display:true,text:"T"}},
+        y:{beginAtZero:true,title:{display:true,text:"Value"},ticks:{callback:v=>fmt(v)}}
       },
-      de_de: {
-        title: "App 4: Zukünftiger Wert (nominal und real) von nominell konstanten periodischen Sparzahlungen",
-        gPmt: "Periodische Sparzahlungen", lPmt: "Sparzahlung pro Jahr",
-        gHor: "Zeitraum (Jahre)", lYears: "Jahre",
-        gRates: "Sätze", lRate: "Zinssatz", lInfl: "Inflationsrate",
-        btn: "Berechnen",
-        legPmt: "Periodische Sparzahlung",
-        legSum: "Summe der periodischen Sparzahlungen (nominal)",
-        legFVNom: "Zukünftiger Wert (nominal)",
-        legFVReal: "Zukünftiger Wert (real)",
-        kpiSumLbl: "Summe der periodischen Sparzahlungen (nominal):",
-        kpiFvNomLbl: "Zukünftiger Wert (nominal):",
-        kpiFvRealLbl: "Zukünftiger Wert (real):"
-      }
-    };
-    const T = I18N[lang] || I18N.en_en;
-    [
-      "title","gPmt","lPmt","gHor","lYears","gRates","lRate","lInfl",
-      "legPmt","legSum","legFVNom","legFVReal","kpiSumLbl","kpiFvNomLbl","kpiFvRealLbl"
-    ].forEach(id => document.getElementById(id).textContent = T[id]);
-    document.getElementById("compute").textContent = T.btn;
-    document.getElementById("debugBox").style.display = debug ? "block" : "none";
+      plugins:{legend:{display:false}},
+      datasets:{bar:{grouped:false,barPercentage:1.0,categoryPercentage:1.0}}
+    }});
 
-    // ---- UI refs
-    const pmtEl = document.getElementById("pmt");
-    const nperEl= document.getElementById("nper");
-    const rateEl= document.getElementById("rate");
-    const inflEl= document.getElementById("infl");
-    const pmtLbl= document.getElementById("pmtLabel");
-    const nperLbl=document.getElementById("nperLabel");
-    const rateLbl=document.getElementById("rateLabel");
-    const inflLbl=document.getElementById("inflLabel");
+  function drawChart(t, contrib, sumNom, fvNom, fvReal){
+    xBase=t.length;
+    const labels=[...t.map(String),"T","T","T"];
+    xTotal=labels.length;
 
-    const sumOut   = document.getElementById("sumOut");
-    const fvNomOut = document.getElementById("fvNomOut");
-    const fvRealOut= document.getElementById("fvRealOut");
-    const dbg = document.getElementById("debug");
+    const orange=[...contrib,null,null,null];
+    const gray  =Array(xTotal).fill(null); gray[xBase]=sumNom;
+    const green =Array(xTotal).fill(null); green[xBase+1]=fvNom;
+    const blue  =Array(xTotal).fill(null); blue[xBase+2]=fvReal;
 
-    const fmt=(x,opts={})=>Number(x).toLocaleString(undefined,{maximumFractionDigits:2,...opts});
-    const log=x=>{ if(debug) dbg.textContent = typeof x==="string"?x:JSON.stringify(x,null,2); };
-    function refreshLabels(){
-      pmtLbl.textContent  = fmt(pmtEl.value,{maximumFractionDigits:0});
-      nperLbl.textContent = parseInt(nperEl.value,10);
-      rateLbl.textContent = (parseFloat(rateEl.value)*100).toFixed(2) + "%";
-      inflLbl.textContent = (parseFloat(inflEl.value)*100).toFixed(2) + "%";
-    }
-    refreshLabels();
+    bar.data.labels=labels;
+    bar.data.datasets=[
+      {label:"Periodic", data:orange, backgroundColor:"#ff9800"},
+      {label:"SumNom",   data:gray,   backgroundColor:"#9e9e9e"},
+      {label:"FVNom",    data:green,  backgroundColor:"#2e7d32"},
+      {label:"FVReal",   data:blue,   backgroundColor:"#1976d2"}
+    ];
+    bar.update();
+  }
 
-    // ---- Chart: orange bars per year; at T show gray, green, blue
-    const ctx = document.getElementById("bar").getContext("2d");
-    const bar = new Chart(ctx, {
-      type: "bar",
-      data: { labels: [], datasets: [] },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          x: {
-            ticks: {
-              autoSkip: false,
-              callback: (value, idx, ticks) => {
-                // Numbers for 1..n, single "T" on the very last tick
-                const last = ticks.length - 1;
-                if (idx < baseCount4) return ticks[idx].label;
-                return idx === last ? "T" : "";
-              }
-            },
-            title: { display: true, text: "T" }
-          },
-          y: {
-            beginAtZero: true,
-            title: { display: true, text: "Value" },
-            ticks: { callback: v => fmt(v) }
-          }
-        },
-        plugins: { legend: { display: false } },
-        datasets: { bar: { grouped: false, barPercentage: 1.0, categoryPercentage: 1.0 } }
-      }
-    });
-    
-    let baseCount4 = 0;
+  import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
+  const webr=new WebR();
+  function unwrap(x){ if(x==null||typeof x!=="object")return x; if(x.type==="list"){const o={};(x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i]));return o;}
+    if(Array.isArray(x.values)) return x.values.length===1?unwrap(x.values[0]):x.values.map(unwrap); return x; }
+  const num=x=>typeof x==="number"?x:(x&&x.values?x.values[0]:Array.isArray(x)?x[0]:NaN);
+  const arr=x=>Array.isArray(x)?x.map(num):(x&&x.values?x.values.map(num):[]);
 
-    function drawChart(t, contrib, sumNom, fvNom, fvReal) {
-      // labels: 1..n + three extra slots for the three end bars
-      baseCount4 = t.length;
-      const labels = [...t.map(String), "T", "T", "T"];
-    
-      const orange = [...contrib, null, null, null];
-      const gray   = Array(baseCount4 + 3).fill(null); gray[baseCount4]   = sumNom;
-      const green  = Array(baseCount4 + 3).fill(null); green[baseCount4+1]= fvNom;
-      const blue   = Array(baseCount4 + 3).fill(null); blue[baseCount4+2] = fvReal;
-    
-      bar.data.labels = labels;
-      bar.data.datasets = [
-        { label: "Periodic", data: orange, backgroundColor: "#ff9800" },
-        { label: "SumNom",   data: gray,   backgroundColor: "#9e9e9e" },
-        { label: "FVNom",    data: green,  backgroundColor: "#2e7d32" },
-        { label: "FVReal",   data: blue,   backgroundColor: "#1976d2" }
-      ];
-      bar.update();
-    }
+  async function init(){ log("Starting WebR…"); await webr.init(); const code=await (await fetch("./r/ucase4.R")).text(); await webr.evalR(code); log("WebR ready."); }
+  async function compute(){
+    try{
+      refresh();
+      const r=await webr.evalR(`ucase4(pmt=${+pmtEl.value}, nper=${parseInt(nperEl.value,10)}, rate=${+rateEl.value}, inflation=${+inflEl.value})`);
+      let js=await r.toJs(); if(js&&js.type) js=unwrap(js);
+      const res=js.results||{};
+      const sumNom=num(res.sum_nominal), fvNom=num(res.fv_nominal), fvReal=num(res.fv_real);
+      const t=arr(res.t), contrib=arr(res.contrib_path);
+      sumOut.textContent=fmt(sumNom,{maximumFractionDigits:0}); fvNomOut.textContent=fmt(fvNom); fvRealOut.textContent=fmt(fvReal);
+      drawChart(t, contrib, sumNom, fvNom, fvReal); log(js);
+    }catch(e){ log("Compute error: "+(e?.message||e)); }
+  }
 
-    // ---- WebR
-    import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
-    const webr = new WebR();
-    function unwrap(x){ if(x==null||typeof x!=="object")return x; if(x.type==="list"){const o={};(x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i]));return o;} if(Array.isArray(x.values)) return x.values.length===1?unwrap(x.values[0]):x.values.map(unwrap); return x; }
-    
-    // Extract a single number from any WebR/JS shape
-    function num(x) {
-      if (typeof x === "number") return x;
-      if (x && typeof x === "object") {
-        if (Array.isArray(x)) return num(x[0]);
-        if ("values" in x)    return num(x.values[0]);
-      }
-      return NaN;
-    }
-    
-    // Extract an array of numbers from any WebR/JS vector shape
-    function arr(x) {
-      if (Array.isArray(x))   return x.map(num);
-      if (x && x.values)      return x.values.map(num);
-      return [];
-    }
-
-    async function init(){
-      log("Starting WebR…");
-      await webr.init();
-      const code = await (await fetch("./r/ucase4.R")).text();
-      await webr.evalR(code);
-      log("WebR ready. ucase4() loaded.");
-    }
-
-    async function compute(){
-      try{
-        refreshLabels();
-        const pmt = parseFloat(pmtEl.value);
-        const nper= parseInt(nperEl.value,10);
-        const rate= parseFloat(rateEl.value);
-        const infl= parseFloat(inflEl.value);
-    
-        const r   = await webr.evalR(`ucase4(pmt=${pmt}, nper=${nper}, rate=${rate}, inflation=${infl})`);
-        let js = await r.toJs();
-        if (js && js.type) js = unwrap(js);
-    
-        const res = js?.results || {};
-        const sumNom = num(res.sum_nominal);
-        const fvNom  = num(res.fv_nominal);
-        const fvReal = num(res.fv_real);
-        const t      = arr(res.t);
-        const contrib= arr(res.contrib_path);
-    
-        if (![sumNom,fvNom,fvReal].every(Number.isFinite) || !contrib.length || !t.length) {
-          throw new Error("Shape mismatch");
-        }
-    
-        sumOut.textContent    = fmt(sumNom, { maximumFractionDigits: 0 });
-        fvNomOut.textContent  = fmt(fvNom);
-        fvRealOut.textContent = fmt(fvReal);
-    
-        const labels = t.map(String);
-        drawChart(labels, contrib, sumNom, fvNom, fvReal);
-        log(js);
-      } catch (e){
-        log("Compute error: " + (e?.message || e));
-      }
-    }
-        // ---- Event listeners
-
-    document.getElementById("compute").addEventListener("click", compute);
-    [pmtEl,nperEl,rateEl,inflEl].forEach(el=>el.addEventListener("input", compute));
-
-    await init();
-    await compute();
-  </script>
+  document.getElementById("compute").addEventListener("click", compute);
+  [pmtEl,nperEl,rateEl,inflEl].forEach(el=>el.addEventListener("input", compute));
+  await init(); await compute();
+</script>
 </body>
 </html>
