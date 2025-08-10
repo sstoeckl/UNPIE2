@@ -191,14 +191,7 @@
   const num=x=>typeof x==="number"?x:(x&&x.values?x.values[0]:Array.isArray(x)?x[0]:NaN);
   const arr=x=>Array.isArray(x)?x.map(num):(x&&x.values?x.values.map(num):[]);
 
-  async function init(){
-    log("Starting WebR…");
-    await webr.init();
-    const rCode = `./r/ucase7.R`;
-    await webr.evalR(rCode);
-    log("WebR ready.");
-  }
-
+  async function init(){ log("Starting WebR…"); await webr.init(); const code=await (await fetch("./r/ucase7.R")).text(); await webr.evalR(code); log("WebR ready."); }
   async function compute(){
     try{
       refresh();
