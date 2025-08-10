@@ -36,26 +36,34 @@
     <div class="row">
       <div><strong>Future Value:</strong> <span id="fv">—</span></div>
     </div>
+    <div class="row" style="margin-top:1rem">
+      <canvas id="chart" height="120"></canvas>
+    </div>
   </div>
 
   <h3>Debug output</h3>
   <pre id="out">Waiting…</pre>
+  
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
 <script type="module">
-  // ===== Minimal helper to show messages in the Debug box
+  // ===== Helpers / UI refs
   const out = document.getElementById("out");
   const fvSpan = document.getElementById("fv");
+  const ctx = document.getElementById("chart").getContext("2d");
+  let chart; // Chart.js instance
+
   function log(msg, obj) {
     out.textContent =
       (typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)) +
       (obj ? "\n" + JSON.stringify(obj, null, 2) : "");
   }
 
-  // ===== WebR setup
+  // ===== WebR
   import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
   const webR = new WebR();
 
-  // Convert WebR's {type,names,values} objects into plain JS
+  // unwrap {type,names,values} → plain JS
   function unwrap(x) {
     if (x == null || typeof x !== "object") return x;
     if (x.type === "list") {
@@ -64,27 +72,51 @@
       return o;
     }
     if (Array.isArray(x.values)) {
-      // atomic vectors are wrapped as {values:[...]}
-      if (x.values.length === 1) return unwrap(x.values[0]);
-      return x.values.map(unwrap);
+      return x.values.length === 1 ? unwrap(x.values[0]) : x.values.map(unwrap);
     }
     return x;
   }
 
   async function init() {
-    try {
-      log("Starting WebR…");
-      await webR.init();
-      // Load your R function file (case‑sensitive path on GitHub Pages)
-      const resp = await fetch("./r/ucase1.R");
-      if (!resp.ok) throw new Error(`Could not fetch r/ucase1.R (${resp.status})`);
-      const code = await resp.text();
-      await webR.evalR(code);
-      log("WebR ready. ucase1() loaded.");
-    } catch (e) {
-      log("Init error: " + (e?.message || e));
-      throw e;
-    }
+    log("Starting WebR…");
+    await webR.init();
+    const resp = await fetch("./r/ucase1.R");
+    if (!resp.ok) throw new Error(`Could not fetch r/ucase1.R (${resp.status})`);
+    const code = await resp.text();
+    await webR.evalR(code);
+    log("WebR ready. ucase1() loaded.");
+
+    // init empty chart
+    chart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [{
+          label: "Future Value path",
+          data: [],
+          tension: 0.15,
+          pointRadius: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { title: { display: true, text: "Period (t)" } },
+          y: { title: { display: true, text: "Value" }, ticks: { callback: v => v.toLocaleString() } }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: c => ` ${c.parsed.y.toLocaleString(undefined,{maximumFractionDigits:2})}` } }
+        }
+      }
+    });
+  }
+
+  function updateChart(t, fvPath) {
+    chart.data.labels = t;
+    chart.data.datasets[0].data = fvPath;
+    chart.update();
   }
 
   async function runOnce() {
@@ -93,18 +125,22 @@
       const nper = parseInt(document.getElementById("nper").value, 10);
       const pv   = parseFloat(document.getElementById("pv").value);
 
-      // Call the R function; returns a WebR object
       const rObj = await webR.evalR(`ucase1(rate=${rate}, nper=${nper}, pv=${pv})`);
       const raw  = await rObj.toJs();
-      const js   = unwrap(raw); // -> { ok, inputs:{...}, results:{ fv: ... } }
+      const js   = unwrap(raw);
 
       const fv = js?.results?.fv;
-      if (typeof fv !== "number") {
+      const t = js?.results?.t?.values ?? js?.results?.t; // defensive
+      const path = js?.results?.fv_path?.values ?? js?.results?.fv_path;
+
+      if (typeof fv !== "number" || !Array.isArray(path)) {
         log("Unexpected result shape from R:", js);
         fvSpan.textContent = "n/a";
         return;
       }
+
       fvSpan.textContent = fv.toFixed(2);
+      updateChart(t, path);
       log(js);
     } catch (e) {
       fvSpan.textContent = "n/a";
@@ -114,7 +150,7 @@
 
   document.getElementById("run").addEventListener("click", runOnce);
   await init();
-  await runOnce(); // auto-run once on load
+  await runOnce();
 </script>
 </body>
 </html>
