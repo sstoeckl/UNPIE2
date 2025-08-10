@@ -216,7 +216,7 @@
       refresh();
       const p=+pmtEl.value, n=parseInt(nperEl.value,10),
             mu=+muEl.value, s=+volEl.value, c=+convEl.value;
-      const r=await webr.evalR(`ucase10(pmt_real=${p}, nper=${n}, mu_real=${mu}, vol_real=${s}, conv=${c}, n_scen=10000, n_show=10, seed=42)`);
+      const r=await webr.evalR(`ucase10(pmt_real=${p}, nper=${n}, mu_real=${mu}, vol_real=${s}, conv=${c}, n_scen=10000, n_show=10)`);
       let js=await r.toJs(); if(js&&js.type) js=unwrap(js);
       const R=js.results||{};
       const t=arr(R.t);
