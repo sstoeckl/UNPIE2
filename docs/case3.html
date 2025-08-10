@@ -158,7 +158,13 @@
         },
         plugins:{ legend:{ display:false } },
         // <- NEW: make all bars wide and overlap within the same category
-        datasets: { bar: { barPercentage: 1.0, categoryPercentage: 1.0 } }
+        datasets: {
+          bar: {
+            grouped: false,          // <- wichtig! (überlagern statt nebeneinander)
+            barPercentage: 1.0,      // volle Breite je Kategorie
+            categoryPercentage: 1.0
+          }
+        }
       }
     });
 
