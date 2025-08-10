@@ -48,16 +48,14 @@
             <div class="val" id="pmtLabel">1,000</div>
           </div>
         </div>
-
         <div class="group">
           <h3 id="gHor">Time horizon (years)</h3>
           <div class="row">
             <label for="nper" style="flex:1" id="lYears">Years</label>
-            <input id="nper" type="range" min="1" max="50" step="1" value="30">
-            <div class="val" id="nperLabel">30</div>
+            <input id="nper" type="range" min="1" max="50" step="1" value="10">
+            <div class="val" id="nperLabel">10</div>
           </div>
         </div>
-
         <div class="group">
           <h3 id="gRates">Rates</h3>
           <div class="row">
@@ -95,7 +93,7 @@
 </div>
 
 <script type="module">
-  // Params & i18n (same pattern as case5/case6)
+  // Params & i18n
   const params=new URLSearchParams(location.search);
   const lang =(params.get("lang") || "en_EN").toLowerCase();
   const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
@@ -137,17 +135,27 @@
     rateLbl.textContent=(parseFloat(rateEl.value)*100).toFixed(2)+"%";
     inflLbl.textContent=(parseFloat(inflEl.value)*100).toFixed(2)+"%"; } refresh();
 
-  // Chart (mirrors your Case 5 paired strategy + triple at T)
+  // Chart
   let xBase=0,xTotal=0;
   const ctx=document.getElementById("bar").getContext("2d");
   const bar=new Chart(ctx,{type:"bar",data:{labels:[],datasets:[]},
     options:{
       responsive:true,maintainAspectRatio:false,
       scales:{
-        x:{ticks:{autoSkip:false,callback:function(v){
-              if (v < xBase) return (v % 2 === 0) ? this.getLabelForValue(v) : "";
-              return v === (xTotal - 1) ? "T" : "";
-            }}, title:{display:true,text:"T"}},
+        x:{
+          ticks:{
+            autoSkip:false,
+            callback:function(v){
+              // show "0" for first two slots, then only the first slot label of each year-pair, and "T" on the last slot
+              if (v < 2) return "0";
+              if (v === xTotal - 1) return "T";
+              // inside yearly pairs starting at index 2: show label only on the first of the pair
+              const idxInPairs = v - 2;
+              return (idxInPairs % 2 === 0) ? this.getLabelForValue(v) : "";
+            }
+          },
+          title:{display:true,text:"T"}
+        },
         y:{beginAtZero:true,title:{display:true,text:"Value"},ticks:{callback:v=>fmt(v)}}
       },
       plugins:{legend:{display:false}},
@@ -155,30 +163,32 @@
     }});
 
   function drawChart(t, pathNomFlat, pathNomIndexed, sumNom, pvNom, pvReal) {
-    // Duplicate each year: [1,1,2,2,...] so orange/grey sit side-by-side
-    const pairLabels=[], orange=[], grey=[];
+    // pair labels for years: 1,1,2,2,...
+    const pairLabels=[]; const orange=[]; const grey=[];
     t.forEach((ti, idx) => {
       pairLabels.push(String(ti), String(ti));
-      orange.push(pathNomFlat[idx], null);      // constant nominal
-      grey.push(null, pathNomIndexed[idx]);     // indexed for inflation
+      orange.push(pathNomFlat[idx], null);      // orange on first slot
+      grey.push(null, pathNomIndexed[idx]);     // grey on second slot
     });
 
-    // final triple under single "T"
-    const labels=[...pairLabels, "T","T","T"];
-    xBase=pairLabels.length;
-    xTotal=labels.length;
+    // labels: two left "0" slots (green + blue), then pairs, then trailing "T" for the sum
+    const labels=["0","0", ...pairLabels, "T"];
+    xBase  = labels.length - 1; // last index holds "T"
+    xTotal = labels.length;
 
-    const sumArr = Array(xTotal).fill(null); sumArr[xBase]   = sumNom; // grey
-    const pvNArr = Array(xTotal).fill(null); pvNArr[xBase+1] = pvNom;  // green
-    const pvRArr = Array(xTotal).fill(null); pvRArr[xBase+2] = pvReal; // blue
+    const green = Array(xTotal).fill(null); green[0] = pvNom;  // left-most
+    const blue  = Array(xTotal).fill(null); blue[1] = pvReal;  // second-left
+    const orangeData = [null, null, ...orange];
+    const greyData   = [null, null, ...grey];
+    const sumArr = Array(xTotal).fill(null); sumArr[xTotal-1] = sumNom; // right-most "T"
 
     bar.data.labels=labels;
     bar.data.datasets=[
-      { label:"NomFlat", data:orange, backgroundColor:"#ff9800" },
-      { label:"NomIndexed", data:grey, backgroundColor:"#9e9e9e" },
+      { label:"NomFlat", data:orangeData, backgroundColor:"#ff9800" },
+      { label:"NomIndexed", data:greyData, backgroundColor:"#9e9e9e" },
       { label:"SumNom", data:sumArr, backgroundColor:"#9e9e9e" },
-      { label:"PvNom", data:pvNArr, backgroundColor:"#2e7d32" },
-      { label:"PvReal", data:pvRArr, backgroundColor:"#1976d2" }
+      { label:"PvNom", data:green, backgroundColor:"#2e7d32" },
+      { label:"PvReal", data:blue, backgroundColor:"#1976d2" }
     ];
     bar.update();
   }
@@ -191,7 +201,14 @@
   const num=x=>typeof x==="number"?x:(x&&x.values?x.values[0]:Array.isArray(x)?x[0]:NaN);
   const arr=x=>Array.isArray(x)?x.map(num):(x&&x.values?x.values.map(num):[]);
 
-  async function init(){ log("Starting WebR…"); await webr.init(); const code=await (await fetch("./r/ucase7.R")).text(); await webr.evalR(code); log("WebR ready."); }
+  async function init(){
+    log("Starting WebR…");
+    await webr.init();
+    const code = await (await fetch("./r/ucase7.R")).text();
+    await webr.evalR(code);
+    log("WebR ready.");
+  }
+
   async function compute(){
     try{
       refresh();
