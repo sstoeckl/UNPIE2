@@ -25,7 +25,6 @@
   .val{width:7rem;text-align:right;color:#666;font-variant-numeric:tabular-nums}
   input[type=range]{width:100%}
   button{padding:.55rem .9rem;border:0;border-radius:10px;background:#eee;cursor:pointer}
-
   .right{padding:10px;display:flex;flex-direction:column;height:100%;overflow:hidden}
   .stats{display:flex;gap:10px;justify-content:center;margin-bottom:8px;flex:0 0 auto}
   .stat{background:#f7f7f9;border-radius:10px;padding:.45rem .7rem;font-variant-numeric:tabular-nums}
@@ -46,27 +45,27 @@
         <!-- Controls -->
         <div class="panel left">
           <div class="group">
-            <h3 id="lblGroupAmount">Single contribution</h3>
+            <h3 id="gAmt">Single contribution</h3>
             <div class="row">
-              <label for="pv" style="flex:1" id="lblAmount">Amount</label>
+              <label for="pv" style="flex:1" id="lAmt">Amount</label>
               <input id="pv" type="range" min="1000" max="100000" step="100" value="30400">
               <div class="val" id="pvLabel">30,400</div>
             </div>
           </div>
 
           <div class="group">
-            <h3 id="lblGroupHorizon">Horizon (years)</h3>
+            <h3 id="gHor">Horizon (years)</h3>
             <div class="row">
-              <label for="nper" style="flex:1" id="lblYears">Years</label>
+              <label for="nper" style="flex:1" id="lYears">Years</label>
               <input id="nper" type="range" min="1" max="50" step="1" value="35">
               <div class="val" id="nperLabel">35</div>
             </div>
           </div>
 
           <div class="group">
-            <h3 id="lblGroupRate">Interest rate</h3>
+            <h3 id="gRate">Interest rate</h3>
             <div class="row">
-              <label for="rate" style="flex:1" id="lblRate">Rate (per year)</label>
+              <label for="rate" style="flex:1" id="lRate">Rate (per year)</label>
               <input id="rate" type="range" min="0" max="0.08" step="0.0005" value="0.02">
               <div class="val" id="rateLabel">2.00%</div>
             </div>
@@ -78,13 +77,13 @@
         <!-- Chart & KPIs -->
         <div class="panel right">
           <div class="stats">
-            <div class="stat"><strong id="lblInitial">Initial:</strong> <span id="pvOut">—</span></div>
-            <div class="stat"><strong id="lblFV">Future value:</strong> <span id="fvOut">—</span></div>
+            <div class="stat"><strong id="sInit">Initial:</strong> <span id="pvOut">—</span></div>
+            <div class="stat"><strong id="sFV">Future value:</strong> <span id="fvOut">—</span></div>
           </div>
           <div class="chartWrap"><canvas id="bar"></canvas></div>
           <div class="legend">
-            <span><span class="dot" style="background:#ff9800"></span><span id="legInitial">Initial contribution</span></span>
-            <span><span class="dot" style="background:#9e9e9e"></span><span id="legFuture">Future value at T</span></span>
+            <span><span class="dot" style="background:#ff9800"></span><span id="legInit">Initial contribution</span></span>
+            <span><span class="dot" style="background:#9e9e9e"></span><span id="legFV">Future value at T</span></span>
           </div>
           <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
         </div>
@@ -92,156 +91,83 @@
     </div>
   </div>
 
-  <script type="module">
-    // -------- URL params
-    const params = new URLSearchParams(location.search);
-    const lang = (params.get("lang") || "en_EN").toLowerCase();
-    const debug = (params.get("debug") || "FALSE").toUpperCase() === "TRUE";
+<script type="module">
+  // URL params
+  const params=new URLSearchParams(location.search);
+  const lang=(params.get("lang")||"en_EN").toLowerCase();
+  const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
 
-    // -------- i18n strings (can be moved to external JSON later)
-    const I18N = {
-      en_en: {
-        title: "App 1: Future value of a single contribution",
-        groupAmount: "Single contribution",
-        amount: "Amount",
-        groupHorizon: "Horizon (years)",
-        years: "Years",
-        groupRate: "Interest rate",
-        rate: "Rate (per year)",
-        btn: "Compute",
-        lblInitial: "Initial:",
-        lblFV: "Future value:",
-        legInitial: "Initial contribution",
-        legFuture: "Future value at T"
+  // i18n
+  const I18N={
+    en_en:{title:"App 1: Future value of a single contribution",
+      gAmt:"Single contribution",lAmt:"Amount",gHor:"Horizon (years)",lYears:"Years",
+      gRate:"Interest rate",lRate:"Rate (per year)",btn:"Compute",
+      sInit:"Initial:",sFV:"Future value:",legInit:"Initial contribution",legFV:"Future value at T"},
+    de_de:{title:"App 1: Zukünftiger Wert einer einmaligen Sparzahlung",
+      gAmt:"Einmalige Sparzahlung",lAmt:"Betrag",gHor:"Zeitraum (Jahre)",lYears:"Jahre",
+      gRate:"Zinssatz",lRate:"Zinssatz (pro Jahr)",btn:"Berechnen",
+      sInit:"Einmalig:",sFV:"Zukünftiger Wert:",legInit:"Einmalige (heutige) Sparzahlung",legFV:"Zukünftiger Wert dieser Sparzahlung"}
+  };
+  const T=I18N[lang]||I18N.en_en;
+  ["title","gAmt","lAmt","gHor","lYears","gRate","lRate","sInit","sFV","legInit","legFV"].forEach(id=>document.getElementById(id).textContent=T[id]);
+  document.getElementById("compute").textContent=T.btn;
+  document.getElementById("debugBox").style.display=debug?"block":"none";
+
+  // UI
+  const pvEl=document.getElementById("pv"), nperEl=document.getElementById("nper"), rateEl=document.getElementById("rate");
+  const pvLabel=document.getElementById("pvLabel"), nperLabel=document.getElementById("nperLabel"), rateLabel=document.getElementById("rateLabel");
+  const pvOut=document.getElementById("pvOut"), fvOut=document.getElementById("fvOut"), dbg=document.getElementById("debug");
+  const fmt=(x,opts={})=>Number(x).toLocaleString(undefined,{maximumFractionDigits:2,...opts});
+  const log=x=>{ if(debug) dbg.textContent=typeof x==="string"?x:JSON.stringify(x,null,2); };
+  function refresh(){ pvLabel.textContent=fmt(pvEl.value,{maximumFractionDigits:0}); nperLabel.textContent=parseInt(nperEl.value,10);
+    rateLabel.textContent=(parseFloat(rateEl.value)*100).toFixed(2)+"%"; } refresh();
+
+  // Chart
+  const ctx=document.getElementById("bar").getContext("2d");
+  const bar=new Chart(ctx,{type:"bar",
+    data:{labels:["0","T"],datasets:[]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      scales:{
+        x:{ticks:{autoSkip:false},title:{display:true,text:"T"}},
+        y:{beginAtZero:true,title:{display:true,text:"Value"},ticks:{callback:v=>fmt(v)}}
       },
-      de_de: {
-        title: "App 1: Zukünftiger Wert einer einmaligen Sparzahlung",
-        groupAmount: "Einmalige Sparzahlung",
-        amount: "Betrag",
-        groupHorizon: "Zeitraum (Jahre)",
-        years: "Jahre",
-        groupRate: "Zinssatz",
-        rate: "Zinssatz (pro Jahr)",
-        btn: "Berechnen",
-        lblInitial: "Einmalig:",
-        lblFV: "Zukünftiger Wert:",
-        legInitial: "Einmalige (heutige) Sparzahlung",
-        legFuture: "Zukünftiger Wert dieser Sparzahlung"
-      }
-    };
-    const T = I18N[lang] || I18N.en_en;
+      plugins:{legend:{display:false}},
+      datasets:{bar:{grouped:false,barPercentage:1.0,categoryPercentage:1.0}}
+    }});
 
-    // Apply language
-    document.getElementById("title").textContent = T.title;
-    document.getElementById("lblGroupAmount").textContent = T.groupAmount;
-    document.getElementById("lblAmount").textContent = T.amount;
-    document.getElementById("lblGroupHorizon").textContent = T.groupHorizon;
-    document.getElementById("lblYears").textContent = T.years;
-    document.getElementById("lblGroupRate").textContent = T.groupRate;
-    document.getElementById("lblRate").textContent = T.rate;
-    document.getElementById("compute").textContent = T.btn;
-    document.getElementById("lblInitial").textContent = T.lblInitial;
-    document.getElementById("lblFV").textContent = T.lblFV;
-    document.getElementById("legInitial").textContent = T.legInitial;
-    document.getElementById("legFuture").textContent = T.legFuture;
-    document.getElementById("debugBox").style.display = debug ? "block" : "none";
+  function drawChart(pv,fv){
+    bar.data.datasets=[
+      { label:"Initial", data:[pv,null], backgroundColor:"#ff9800" },
+      { label:"FV",      data:[null,fv], backgroundColor:"#9e9e9e" }
+    ];
+    bar.update();
+  }
 
-    // -------- UI refs
-    const rateEl = document.getElementById("rate");
-    const nperEl = document.getElementById("nper");
-    const pvEl   = document.getElementById("pv");
-    const rateLbl= document.getElementById("rateLabel");
-    const nperLbl= document.getElementById("nperLabel");
-    const pvLbl  = document.getElementById("pvLabel");
-    const pvOut  = document.getElementById("pvOut");
-    const fvOut  = document.getElementById("fvOut");
-    const dbg    = document.getElementById("debug");
-    const log    = x => { if (debug) dbg.textContent = typeof x==="string"?x:JSON.stringify(x,null,2); };
+  // WebR
+  import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
+  const webr=new WebR();
+  function unwrap(x){ if(x==null||typeof x!=="object")return x; if(x.type==="list"){const o={};(x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i]));return o;}
+    if(Array.isArray(x.values))return x.values.length===1?unwrap(x.values[0]):x.values.map(unwrap); return x; }
+  const num=x=>typeof x==="number"?x:(x&&x.values?x.values[0]:Array.isArray(x)?x[0]:NaN);
 
-    const fmt = (x,opts={}) => Number(x).toLocaleString(undefined,{maximumFractionDigits:2,...opts});
-    function refreshLabels(){
-      rateLbl.textContent = (parseFloat(rateEl.value)*100).toFixed(2) + "%";
-      nperLbl.textContent = parseInt(nperEl.value,10);
-      pvLbl.textContent   = fmt(pvEl.value,{maximumFractionDigits:0});
-    }
-    refreshLabels();
+  async function init(){ log("Starting WebR…"); await webr.init(); const code=await (await fetch("./r/ucase1.R")).text(); await webr.evalR(code); log("WebR ready."); }
+  async function compute(){
+    try{
+      refresh();
+      const r=await webr.evalR(`ucase1(rate=${+rateEl.value}, nper=${parseInt(nperEl.value,10)}, pv=${+pvEl.value})`);
+      let js=await r.toJs(); if(js&&js.type) js=unwrap(js);
+      const fv=num(js?.results?.fv);
+      pvOut.textContent=fmt(+pvEl.value,{maximumFractionDigits:0});
+      fvOut.textContent=fmt(fv);
+      drawChart(+pvEl.value,fv);
+      log(js);
+    }catch(e){ log("Compute error: "+(e?.message||e)); }
+  }
 
-    // -------- Chart (reduced gap between bars)
-    const ctx = document.getElementById("bar").getContext("2d");
-    const bar = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: ["0","T"],
-        datasets: [
-          { label: "Initial", data: [0, null], backgroundColor: "#ff9800",
-            barPercentage: 0.95, categoryPercentage: 1.0, borderSkipped: "end" },
-          { label: "Future",  data: [null, 0], backgroundColor: "#9e9e9e",
-            barPercentage: 0.95, categoryPercentage: 1.0, borderSkipped: "end" }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        scales: {
-          x: { title: { display: true, text: "T" }, stacked:false, ticks:{ autoSkip:false } },
-          y: { beginAtZero: true, title: { display: true, text: "Value" }, ticks: { callback: v => fmt(v) } }
-        },
-        plugins: { legend: { display: false } }
-      }
-    });
-
-    // -------- WebR (inline R code for simplicity)
-    import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
-    const webr = new WebR();
-    function unwrap(x){ if(x==null||typeof x!=="object")return x; if(x.type==="list"){const o={};(x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i]));return o;} if(Array.isArray(x.values)) return x.values.length===1?unwrap(x.values[0]):x.values.map(unwrap); return x; }
-
-    async function init(){
-      log("Starting WebR…");
-      await webr.init();
-      const rCode = `
-        ucase1 <- function(rate, nper, pv) {
-          stopifnot(is.numeric(rate), is.numeric(nper), is.numeric(pv))
-          t <- 0:nper
-          fv_path <- pv * (1 + rate)^t
-          list(ok=TRUE, inputs=list(rate=rate,nper=nper,pv=pv),
-               results=list(fv=tail(fv_path,1), t=t, fv_path=fv_path))
-        }
-      `;
-      await webr.evalR(rCode);
-      log("WebR ready. ucase1() loaded.");
-    }
-
-    async function compute(){
-      try{
-        refreshLabels();
-        const rate = parseFloat(rateEl.value);
-        const nper = parseInt(nperEl.value,10);
-        const pv   = parseFloat(pvEl.value);
-
-        const res = await webr.evalR(`ucase1(rate=${rate}, nper=${nper}, pv=${pv})`);
-        const js  = unwrap(await res.toJs());
-        const fv  = js?.results?.fv;
-        if (typeof fv !== "number") throw new Error("Unexpected R result");
-
-        pvOut.textContent = fmt(pv,{maximumFractionDigits:0});
-        fvOut.textContent = fmt(fv);
-
-        bar.data.datasets[0].data = [pv, null];
-        bar.data.datasets[1].data = [null, fv];
-        bar.update();
-
-        log(js);
-      }catch(e){
-        log("Compute error: " + (e?.message || e));
-      }
-    }
-
-    document.getElementById("compute").addEventListener("click", compute);
-    rateEl.addEventListener("input", compute);
-    nperEl.addEventListener("input", compute);
-    pvEl.addEventListener("input", compute);
-
-    await init();
-    await compute();
-  </script>
+  document.getElementById("compute").addEventListener("click", compute);
+  [pvEl,nperEl,rateEl].forEach(el=>el.addEventListener("input", compute));
+  await init(); await compute();
+</script>
 </body>
 </html>
