@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>UNPIE2 – Case 1</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module" src="https://webr.r-wasm.org/latest/webr.mjs"></script>
+
+<style>
+  html,body{height:100%;margin:0}
+  body{overflow:hidden;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#fff;color:#111}
+  .app{height:640px;display:grid;place-items:stretch}
+  .wrap{max-width:1100px;margin:0 auto;padding:8px 12px;height:100%;box-sizing:border-box}
+  .title{text-align:center;margin:4px 0 8px;font-size:1.15rem}
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:12px;height:calc(100% - 38px)}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{border:1px solid #e8e8e8;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);background:#fff}
+  .left{padding:10px;overflow:auto}
+  .group{border:1px solid #ddd;border-radius:10px;padding:10px;margin-bottom:10px}
+  .group h3{margin:0 0 8px;font-size:1rem}
+  .row{display:flex;align-items:center;gap:.8rem}
+  .row + .row{margin-top:8px}
+  .val{width:7rem;text-align:right;color:#666;font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%}
+  button{padding:.55rem .9rem;border:0;border-radius:10px;background:#eee;cursor:pointer}
+
+  .right{padding:10px;display:flex;flex-direction:column;height:100%;overflow:hidden}
+  .stats{display:flex;gap:10px;justify-content:center;margin-bottom:8px;flex:0 0 auto}
+  .stat{background:#f7f7f9;border-radius:10px;padding:.45rem .7rem;font-variant-numeric:tabular-nums}
+  .chartWrap{flex:1 0 auto;height:320px}
+  #bar{width:100%;height:100%}
+  .legend{display:flex;gap:1rem;justify-content:center;margin-top:6px;color:#666;font-size:.92rem;flex:0 0 auto}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:.35rem;vertical-align:middle}
+  .debug{margin-top:6px;background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;flex:0 0 110px;display:none}
+  pre{margin:0;font-size:.82rem}
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="wrap">
+      <div class="title" id="title">App 1: Future value of a single contribution</div>
+
+      <div class="grid">
+        <!-- Controls -->
+        <div class="panel left">
+          <div class="group">
+            <h3 id="lblGroupAmount">Single contribution</h3>
+            <div class="row">
+              <label for="pv" style="flex:1" id="lblAmount">Amount</label>
+              <input id="pv" type="range" min="1000" max="100000" step="100" value="30400">
+              <div class="val" id="pvLabel">30,400</div>
+            </div>
+          </div>
+
+          <div class="group">
+            <h3 id="lblGroupHorizon">Horizon (years)</h3>
+            <div class="row">
+              <label for="nper" style="flex:1" id="lblYears">Years</label>
+              <input id="nper" type="range" min="1" max="50" step="1" value="35">
+              <div class="val" id="nperLabel">35</div>
+            </div>
+          </div>
+
+          <div class="group">
+            <h3 id="lblGroupRate">Interest rate</h3>
+            <div class="row">
+              <label for="rate" style="flex:1" id="lblRate">Rate (per year)</label>
+              <input id="rate" type="range" min="0" max="0.08" step="0.0005" value="0.02">
+              <div class="val" id="rateLabel">2.00%</div>
+            </div>
+          </div>
+
+          <button id="compute">Compute</button>
+        </div>
+
+        <!-- Chart & KPIs -->
+        <div class="panel right">
+          <div class="stats">
+            <div class="stat"><strong id="lblInitial">Initial:</strong> <span id="pvOut">—</span></div>
+            <div class="stat"><strong id="lblFV">Future value:</strong> <span id="fvOut">—</span></div>
+          </div>
+          <div class="chartWrap"><canvas id="bar"></canvas></div>
+          <div class="legend">
+            <span><span class="dot" style="background:#ff9800"></span><span id="legInitial">Initial contribution</span></span>
+            <span><span class="dot" style="background:#9e9e9e"></span><span id="legFuture">Future value at T</span></span>
+          </div>
+          <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // -------- URL params
+    const params = new URLSearchParams(location.search);
+    const lang = (params.get("lang") || "en_EN").toLowerCase();
+    const debug = (params.get("debug") || "FALSE").toUpperCase() === "TRUE";
+
+    // -------- i18n strings (can be moved to external JSON later)
+    const I18N = {
+      en_en: {
+        title: "App 1: Future value of a single contribution",
+        groupAmount: "Single contribution",
+        amount: "Amount",
+        groupHorizon: "Horizon (years)",
+        years: "Years",
+        groupRate: "Interest rate",
+        rate: "Rate (per year)",
+        btn: "Compute",
+        lblInitial: "Initial:",
+        lblFV: "Future value:",
+        legInitial: "Initial contribution",
+        legFuture: "Future value at T"
+      },
+      de_de: {
+        title: "App 1: Zukünftiger Wert einer einmaligen Sparzahlung",
+        groupAmount: "Einmalige Sparzahlung",
+        amount: "Betrag",
+        groupHorizon: "Zeitraum (Jahre)",
+        years: "Jahre",
+        groupRate: "Zinssatz",
+        rate: "Zinssatz (pro Jahr)",
+        btn: "Berechnen",
+        lblInitial: "Einmalig:",
+        lblFV: "Zukünftiger Wert:",
+        legInitial: "Einmalige (heutige) Sparzahlung",
+        legFuture: "Zukünftiger Wert dieser Sparzahlung"
+      }
+    };
+    const T = I18N[lang] || I18N.en_en;
+
+    // Apply language
+    document.getElementById("title").textContent = T.title;
+    document.getElementById("lblGroupAmount").textContent = T.groupAmount;
+    document.getElementById("lblAmount").textContent = T.amount;
+    document.getElementById("lblGroupHorizon").textContent = T.groupHorizon;
+    document.getElementById("lblYears").textContent = T.years;
+    document.getElementById("lblGroupRate").textContent = T.groupRate;
+    document.getElementById("lblRate").textContent = T.rate;
+    document.getElementById("compute").textContent = T.btn;
+    document.getElementById("lblInitial").textContent = T.lblInitial;
+    document.getElementById("lblFV").textContent = T.lblFV;
+    document.getElementById("legInitial").textContent = T.legInitial;
+    document.getElementById("legFuture").textContent = T.legFuture;
+    document.getElementById("debugBox").style.display = debug ? "block" : "none";
+
+    // -------- UI refs
+    const rateEl = document.getElementById("rate");
+    const nperEl = document.getElementById("nper");
+    const pvEl   = document.getElementById("pv");
+    const rateLbl= document.getElementById("rateLabel");
+    const nperLbl= document.getElementById("nperLabel");
+    const pvLbl  = document.getElementById("pvLabel");
+    const pvOut  = document.getElementById("pvOut");
+    const fvOut  = document.getElementById("fvOut");
+    const dbg    = document.getElementById("debug");
+    const log    = x => { if (debug) dbg.textContent = typeof x==="string"?x:JSON.stringify(x,null,2); };
+
+    const fmt = (x,opts={}) => Number(x).toLocaleString(undefined,{maximumFractionDigits:2,...opts});
+    function refreshLabels(){
+      rateLbl.textContent = (parseFloat(rateEl.value)*100).toFixed(2) + "%";
+      nperLbl.textContent = parseInt(nperEl.value,10);
+      pvLbl.textContent   = fmt(pvEl.value,{maximumFractionDigits:0});
+    }
+    refreshLabels();
+
+    // -------- Chart (reduced gap between bars)
+    const ctx = document.getElementById("bar").getContext("2d");
+    const bar = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: ["0","T"],
+        datasets: [
+          { label: "Initial", data: [0, null], backgroundColor: "#ff9800",
+            barPercentage: 0.7, categoryPercentage: 0.6, borderSkipped: "end" },
+          { label: "Future",  data: [null, 0], backgroundColor: "#9e9e9e",
+            barPercentage: 0.7, categoryPercentage: 0.6, borderSkipped: "end" }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: {
+          x: { title: { display: true, text: "T" }, stacked:false, ticks:{ autoSkip:false } },
+          y: { beginAtZero: true, title: { display: true, text: "Value" }, ticks: { callback: v => fmt(v) } }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+
+    // -------- WebR (inline R code for simplicity)
+    import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
+    const webr = new WebR();
+    function unwrap(x){ if(x==null||typeof x!=="object")return x; if(x.type==="list"){const o={};(x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i]));return o;} if(Array.isArray(x.values)) return x.values.length===1?unwrap(x.values[0]):x.values.map(unwrap); return x; }
+
+    async function init(){
+      log("Starting WebR…");
+      await webr.init();
+      const rCode = `
+        ucase1 <- function(rate, nper, pv) {
+          stopifnot(is.numeric(rate), is.numeric(nper), is.numeric(pv))
+          t <- 0:nper
+          fv_path <- pv * (1 + rate)^t
+          list(ok=TRUE, inputs=list(rate=rate,nper=nper,pv=pv),
+               results=list(fv=tail(fv_path,1), t=t, fv_path=fv_path))
+        }
+      `;
+      await webr.evalR(rCode);
+      log("WebR ready. ucase1() loaded.");
+    }
+
+    async function compute(){
+      try{
+        refreshLabels();
+        const rate = parseFloat(rateEl.value);
+        const nper = parseInt(nperEl.value,10);
+        const pv   = parseFloat(pvEl.value);
+
+        const res = await webr.evalR(`ucase1(rate=${rate}, nper=${nper}, pv=${pv})`);
+        const js  = unwrap(await res.toJs());
+        const fv  = js?.results?.fv;
+        if (typeof fv !== "number") throw new Error("Unexpected R result");
+
+        pvOut.textContent = fmt(pv,{maximumFractionDigits:0});
+        fvOut.textContent = fmt(fv);
+
+        bar.data.datasets[0].data = [pv, null];
+        bar.data.datasets[1].data = [null, fv];
+        bar.update();
+
+        log(js);
+      }catch(e){
+        log("Compute error: " + (e?.message || e));
+      }
+    }
+
+    document.getElementById("compute").addEventListener("click", compute);
+    rateEl.addEventListener("input", compute);
+    nperEl.addEventListener("input", compute);
+    pvEl.addEventListener("input", compute);
+
+    await init();
+    await compute();
+  </script>
+</body>
+</html>
