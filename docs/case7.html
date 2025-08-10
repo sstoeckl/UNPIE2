@@ -52,8 +52,8 @@
           <h3 id="gHor">Time horizon (years)</h3>
           <div class="row">
             <label for="nper" style="flex:1" id="lYears">Years</label>
-            <input id="nper" type="range" min="1" max="50" step="1" value="10">
-            <div class="val" id="nperLabel">10</div>
+            <input id="nper" type="range" min="1" max="50" step="1" value="35">
+            <div class="val" id="nperLabel">35</div>
           </div>
         </div>
         <div class="group">
@@ -75,14 +75,12 @@
       <div class="panel right">
         <div class="chartWrap"><canvas id="bar"></canvas></div>
         <div class="legend">
-          <span><span class="dot" style="background:#ff9800"></span><span id="legNomFlat">Yearly spending (constant nominal)</span></span>
-          <span><span class="dot" style="background:#9e9e9e"></span><span id="legNomIndexed">Yearly spending (indexed for inflation)</span></span>
-          <span><span class="dot" style="background:#9e9e9e"></span><span id="legSumNom">Sum of yearly spending (nominal)</span></span>
           <span><span class="dot" style="background:#2e7d32"></span><span id="legPvNom">Required wealth (nominal spending)</span></span>
           <span><span class="dot" style="background:#1976d2"></span><span id="legPvReal">Required wealth (real spending)</span></span>
+          <span><span class="dot" style="background:#ff9800"></span><span id="legNomFlat">Yearly spending (constant nominal)</span></span>
+          <span><span class="dot" style="background:#9e9e9e"></span><span id="legNomIndexed">Yearly spending (indexed for inflation)</span></span>
         </div>
         <div class="kpis">
-          <div class="kpi"><strong id="kpiSumLbl">Sum of yearly spending (nominal):</strong> <span id="sumOut">—</span></div>
           <div class="kpi"><strong id="kpiPvNomLbl">Required wealth (nominal spending):</strong> <span id="pvNomOut">—</span></div>
           <div class="kpi"><strong id="kpiPvRealLbl">Required wealth (real spending):</strong> <span id="pvRealOut">—</span></div>
         </div>
@@ -103,21 +101,21 @@
       gPmt:"Yearly spending (base, real)", lPmt:"Spending per year",
       gHor:"Time horizon (years)", lYears:"Years",
       gRates:"Rates", lRate:"Interest rate", lInfl:"Inflation rate", btn:"Compute",
+      legPvNom:"Required wealth (nominal spending)", legPvReal:"Required wealth (real spending)",
       legNomFlat:"Yearly spending (constant nominal)", legNomIndexed:"Yearly spending (indexed for inflation)",
-      legSumNom:"Sum of yearly spending (nominal)", legPvNom:"Required wealth (nominal spending)", legPvReal:"Required wealth (real spending)",
-      kpiSumLbl:"Sum of yearly spending (nominal):", kpiPvNomLbl:"Required wealth (nominal spending):", kpiPvRealLbl:"Required wealth (real spending):"},
+      kpiPvNomLbl:"Required wealth (nominal spending):", kpiPvRealLbl:"Required wealth (real spending):"},
     de_de:{title:"App 7: Notwendiges Vermögen zur Finanzierung konstanter (nominal/real) jährlicher Ausgaben",
       gPmt:"Jährliche Ausgaben (Basis, real)", lPmt:"Ausgaben pro Jahr",
       gHor:"Zeitraum (Jahre)", lYears:"Jahre",
       gRates:"Sätze", lRate:"Zinssatz", lInfl:"Inflationsrate", btn:"Berechnen",
+      legPvNom:"Notwendiges Vermögen (nominale Ausgaben)", legPvReal:"Notwendiges Vermögen (reale Ausgaben)",
       legNomFlat:"Jährliche Ausgaben (konstant nominal)", legNomIndexed:"Jährliche Ausgaben (inflationsindexiert)",
-      legSumNom:"Summe der jährlichen Ausgaben (nominal)", legPvNom:"Notwendiges Vermögen (nominale Ausgaben)", legPvReal:"Notwendiges Vermögen (reale Ausgaben)",
-      kpiSumLbl:"Summe der jährlichen Ausgaben (nominal):", kpiPvNomLbl:"Notwendiges Vermögen (nominale Ausgaben):", kpiPvRealLbl:"Notwendiges Vermögen (reale Ausgaben):"}
+      kpiPvNomLbl:"Notwendiges Vermögen (nominale Ausgaben):", kpiPvRealLbl:"Notwendiges Vermögen (reale Ausgaben):"}
   };
   const T=I18N[lang]||I18N.en_en;
   ["title","gPmt","lPmt","gHor","lYears","gRates","lRate","lInfl",
-   "legNomFlat","legNomIndexed","legSumNom","legPvNom","legPvReal",
-   "kpiSumLbl","kpiPvNomLbl","kpiPvRealLbl"].forEach(id=>document.getElementById(id).textContent=T[id]);
+   "legPvNom","legPvReal","legNomFlat","legNomIndexed",
+   "kpiPvNomLbl","kpiPvRealLbl"].forEach(id=>document.getElementById(id).textContent=T[id]);
   document.getElementById("compute").textContent=T.btn;
   document.getElementById("debugBox").style.display=debug?"block":"none";
 
@@ -126,7 +124,7 @@
   const rateEl=document.getElementById("rate"), inflEl=document.getElementById("infl");
   const pmtLbl=document.getElementById("pmtLabel"), nperLbl=document.getElementById("nperLabel");
   const rateLbl=document.getElementById("rateLabel"), inflLbl=document.getElementById("inflLabel");
-  const sumOut=document.getElementById("sumOut"), pvNomOut=document.getElementById("pvNomOut"), pvRealOut=document.getElementById("pvRealOut");
+  const pvNomOut=document.getElementById("pvNomOut"), pvRealOut=document.getElementById("pvRealOut");
   const dbg=document.getElementById("debug");
   const fmt=(x,opts={})=>Number(x).toLocaleString(undefined,{maximumFractionDigits:2,...opts});
   const log=x=>{ if(debug) dbg.textContent=typeof x==="string"?x:JSON.stringify(x,null,2); };
@@ -135,60 +133,49 @@
     rateLbl.textContent=(parseFloat(rateEl.value)*100).toFixed(2)+"%";
     inflLbl.textContent=(parseFloat(inflEl.value)*100).toFixed(2)+"%"; } refresh();
 
-  // Chart
-  let xBase=0,xTotal=0;
+  // Chart: two "0" slots (green, blue), then yearly pairs (orange, grey)
+  let xTotal=0;
   const ctx=document.getElementById("bar").getContext("2d");
   const bar=new Chart(ctx,{type:"bar",data:{labels:[],datasets:[]},
     options:{
       responsive:true,maintainAspectRatio:false,
       scales:{
-        x:{
-          ticks:{
-            autoSkip:false,
-            callback:function(v){
-              // show "0" for first two slots, then only the first slot label of each year-pair, and "T" on the last slot
+        x:{ticks:{autoSkip:false,callback:function(v){
+              // show "0" on first two, then year label only on first slot of each pair
               if (v < 2) return "0";
-              if (v === xTotal - 1) return "T";
-              // inside yearly pairs starting at index 2: show label only on the first of the pair
-              const idxInPairs = v - 2;
-              return (idxInPairs % 2 === 0) ? this.getLabelForValue(v) : "";
-            }
-          },
-          title:{display:true,text:"T"}
-        },
+              const k = v - 2;
+              return (k % 2 === 0) ? this.getLabelForValue(v) : "";
+            }},
+           title:{display:true,text:"T"}},
         y:{beginAtZero:true,title:{display:true,text:"Value"},ticks:{callback:v=>fmt(v)}}
       },
       plugins:{legend:{display:false}},
       datasets:{bar:{grouped:false,barPercentage:0.95,categoryPercentage:1.0}}
     }});
 
-  function drawChart(t, pathNomFlat, pathNomIndexed, sumNom, pvNom, pvReal) {
-    // pair labels for years: 1,1,2,2,...
-    const pairLabels=[]; const orange=[]; const grey=[];
+  function drawChart(t, pathNomFlat, pathNomIndexed, pvNom, pvReal) {
+    // Labels: "0","0", then 1,1,2,2,... to get side-by-side pairs
+    const pairLabels=[];
+    const orange=[]; // constant nominal
+    const grey=[];   // indexed
     t.forEach((ti, idx) => {
       pairLabels.push(String(ti), String(ti));
-      orange.push(pathNomFlat[idx], null);      // orange on first slot
-      grey.push(null, pathNomIndexed[idx]);     // grey on second slot
+      orange.push(pathNomFlat[idx], null);
+      grey.push(null, pathNomIndexed[idx]);
     });
 
-    // labels: two left "0" slots (green + blue), then pairs, then trailing "T" for the sum
-    const labels=["0","0", ...pairLabels, "T"];
-    xBase  = labels.length - 1; // last index holds "T"
+    const labels = ["0","0", ...pairLabels];
     xTotal = labels.length;
 
-    const green = Array(xTotal).fill(null); green[0] = pvNom;  // left-most
-    const blue  = Array(xTotal).fill(null); blue[1] = pvReal;  // second-left
-    const orangeData = [null, null, ...orange];
-    const greyData   = [null, null, ...grey];
-    const sumArr = Array(xTotal).fill(null); sumArr[xTotal-1] = sumNom; // right-most "T"
+    const green = Array(xTotal).fill(null); green[0] = pvNom;
+    const blue  = Array(xTotal).fill(null); blue[1] = pvReal;
 
-    bar.data.labels=labels;
-    bar.data.datasets=[
-      { label:"NomFlat", data:orangeData, backgroundColor:"#ff9800" },
-      { label:"NomIndexed", data:greyData, backgroundColor:"#9e9e9e" },
-      { label:"SumNom", data:sumArr, backgroundColor:"#9e9e9e" },
-      { label:"PvNom", data:green, backgroundColor:"#2e7d32" },
-      { label:"PvReal", data:blue, backgroundColor:"#1976d2" }
+    bar.data.labels = labels;
+    bar.data.datasets = [
+      { label:"PV_nominal", data:green,  backgroundColor:"#2e7d32" },
+      { label:"PV_real",    data:blue,   backgroundColor:"#1976d2" },
+      { label:"NomFlat",    data:orange, backgroundColor:"#ff9800" },
+      { label:"NomIndexed", data:grey,   backgroundColor:"#9e9e9e" }
     ];
     bar.update();
   }
@@ -204,8 +191,8 @@
   async function init(){
     log("Starting WebR…");
     await webr.init();
-    const code = await (await fetch("./r/ucase7.R")).text();
-    await webr.evalR(code);
+    const rCode=await (await fetch("./r/ucase7.R")).text();
+    await webr.evalR(rCode);
     log("WebR ready.");
   }
 
@@ -219,14 +206,12 @@
       const t=arr(R.t),
             nomFlat=arr(R.expense_nominal_path),
             nomIdx =arr(R.expense_real_nominal_path),
-            sumNom =num(R.sum_nominal),
             pvNom  =num(R.pv_required_nominal),
             pvReal =num(R.pv_required_real);
 
-      sumOut.textContent   = fmt(sumNom,{maximumFractionDigits:0});
       pvNomOut.textContent = fmt(pvNom);
       pvRealOut.textContent= fmt(pvReal);
-      drawChart(t, nomFlat, nomIdx, sumNom, pvNom, pvReal);
+      drawChart(t, nomFlat, nomIdx, pvNom, pvReal);
       log(js);
     }catch(e){ log("Compute error: "+(e?.message||e)); }
   }
