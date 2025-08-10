@@ -180,8 +180,16 @@
         maintainAspectRatio: false,
         scales: {
           x: {
-            title: { display: true, text: "T" },
-            ticks: { autoSkip: false }
+            ticks: {
+              autoSkip: false,
+              callback: (value, idx, ticks) => {
+                // Numbers for 1..n, single "T" on the very last tick
+                const last = ticks.length - 1;
+                if (idx < baseCount4) return ticks[idx].label;
+                return idx === last ? "T" : "";
+              }
+            },
+            title: { display: true, text: "T" }
           },
           y: {
             beginAtZero: true,
@@ -190,24 +198,28 @@
           }
         },
         plugins: { legend: { display: false } },
-        datasets: { bar: { grouped: true, barPercentage: 0.95, categoryPercentage: 1.0 } }
+        datasets: { bar: { grouped: false, barPercentage: 1.0, categoryPercentage: 1.0 } }
       }
     });
     
+    let baseCount4 = 0;
+
     function drawChart(t, contrib, sumNom, fvNom, fvReal) {
-      const labels = [...t.map(String), "T"];
+      // labels: 1..n + three extra slots for the three end bars
+      baseCount4 = t.length;
+      const labels = [...t.map(String), "T", "T", "T"];
     
-      const periodic = [...contrib, null];
-      const sumData  = Array(t.length).fill(null).concat(sumNom);
-      const fvNomData = Array(t.length).fill(null).concat(fvNom);
-      const fvRealData = Array(t.length).fill(null).concat(fvReal);
+      const orange = [...contrib, null, null, null];
+      const gray   = Array(baseCount4 + 3).fill(null); gray[baseCount4]   = sumNom;
+      const green  = Array(baseCount4 + 3).fill(null); green[baseCount4+1]= fvNom;
+      const blue   = Array(baseCount4 + 3).fill(null); blue[baseCount4+2] = fvReal;
     
       bar.data.labels = labels;
       bar.data.datasets = [
-        { label: "Periodic", data: periodic, backgroundColor: "#ff9800" },
-        { label: "SumNom",   data: sumData,  backgroundColor: "#9e9e9e" },
-        { label: "FVNom",    data: fvNomData, backgroundColor: "#2e7d32" },
-        { label: "FVReal",   data: fvRealData, backgroundColor: "#1976d2" }
+        { label: "Periodic", data: orange, backgroundColor: "#ff9800" },
+        { label: "SumNom",   data: gray,   backgroundColor: "#9e9e9e" },
+        { label: "FVNom",    data: green,  backgroundColor: "#2e7d32" },
+        { label: "FVReal",   data: blue,   backgroundColor: "#1976d2" }
       ];
       bar.update();
     }

@@ -155,8 +155,16 @@
         maintainAspectRatio: false,
         scales: {
           x: {
-            title: { display: true, text: "T" },
-            ticks: { autoSkip: false }
+            ticks: {
+              autoSkip: false,
+              callback: (value, idx, ticks) => {
+                // Show numbers for 1..n, show "T" only on the LAST tick
+                const last = ticks.length - 1;
+                if (idx < baseCount) return ticks[idx].label;    // "1".."n"
+                return idx === last ? "T" : "";                  // hide earlier T-slots
+              }
+            },
+            title: { display: true, text: "T" }
           },
           y: {
             beginAtZero: true,
@@ -165,25 +173,31 @@
           }
         },
         plugins: { legend: { display: false } },
-        datasets: { bar: { grouped: true, barPercentage: 0.95, categoryPercentage: 1.0 } }
+        // thick bars, no category shrinkage, and no grouping (full width per category)
+        datasets: { bar: { grouped: false, barPercentage: 1.0, categoryPercentage: 1.0 } }
       }
     });
 
+    let baseCount = 0; // number of regular periods (for the tick formatter)
+
     function drawChart(t, contrib, sumContrib, fv) {
-      const labels = [...t.map(String), "T"];
+      // labels: 1..n + two extra slots for the two end bars
+      baseCount = t.length;
+      const labels = [...t.map(String), "T", "T"];
     
-      const periodic = [...contrib, null];
-      const sumData  = Array(t.length).fill(null).concat(sumContrib);
-      const fvData   = Array(t.length).fill(null).concat(fv);
+      const orange = [...contrib, null, null];                 // periods only
+      const gray   = Array(baseCount + 2).fill(null); gray[baseCount]   = sumContrib;
+      const green  = Array(baseCount + 2).fill(null); green[baseCount+1]= fv;
     
       bar.data.labels = labels;
       bar.data.datasets = [
-        { label: "Periodic", data: periodic, backgroundColor: "#ff9800" },
-        { label: "Sum",      data: sumData,  backgroundColor: "#9e9e9e" },
-        { label: "FV",       data: fvData,   backgroundColor: "#2e7d32" }
+        { label: "Periodic", data: orange, backgroundColor: "#ff9800" },
+        { label: "Sum",      data: gray,   backgroundColor: "#9e9e9e" },
+        { label: "FV",       data: green,  backgroundColor: "#2e7d32" }
       ];
       bar.update();
     }
+
 
     // ---- WebR
     import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
