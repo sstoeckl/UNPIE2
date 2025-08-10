@@ -1,4 +1,4 @@
-# add1: Real yearly pension resulting from constant (real) yearly savings
+# ucase10: Real yearly pension resulting from constant (real) yearly savings
 # pmt_real : yearly savings in today's (real) CHF, paid at END of each year
 # nper     : years to retirement
 # mu_real  : expected REAL return per year (e.g. 0.03 for 3%)
