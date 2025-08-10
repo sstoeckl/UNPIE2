@@ -221,7 +221,7 @@
       const s  = +volEl.value;
       const c  = +convEl.value;
   
-      // Run uadd1 in R and convert the matrix of paths to a list of rows (asplit(..., 1))
+      // R call, converting paths matrix into a list of rows
       const r = await webr.evalR(`
         (function(){
           out <- uadd1(pmt_real=${p}, nper=${n}, mu_real=${mu}, vol_real=${s},
@@ -230,23 +230,26 @@
             t  = out$results$t,
             qW = out$results$quantiles_wealth,
             qP = out$results$quantiles_pension,
-            paths = asplit(out$results$paths, 1L)  # list of row-vectors
+            paths = asplit(out$results$paths, 1L)
           )
         })()
       `);
   
-      // Convert to JS
       let js = await r.toJs();
       if (js && js.type) js = unwrap(js);
   
-      const t   = (js.t?.values)   ? js.t.values.map(Number)   : js.t.map(Number);
-      const qW  = (js.qW?.values)  ? js.qW.values.map(Number)  : js.qW.map(Number);
-      const qP  = (js.qP?.values)  ? js.qP.values.map(Number)  : js.qP.map(Number);
+      // Helper to normalize WebR outputs to plain arrays
+      const arr = x =>
+        (x && typeof x === "object" && "values" in x)
+          ? x.values.map(Number)
+          : Array.isArray(x)
+            ? x.map(Number)
+            : [];
   
-      // paths is now an array of arrays (thanks to asplit)
-      const paths = (js.paths || []).map(row =>
-        (row?.values ? row.values.map(Number) : row.map(Number))
-      );
+      const t      = arr(js.t);
+      const qW     = arr(js.qW);
+      const qP     = arr(js.qP);
+      const paths  = (js.paths || []).map(row => arr(row));
   
       drawPaths(t, paths);
       renderRow(wealthRow, qW);
@@ -257,6 +260,7 @@
       log("Compute error: " + (e?.message || e));
     }
   }
+
     // Event listeners
 
   document.getElementById("compute").addEventListener("click", compute);
