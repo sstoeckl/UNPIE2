@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>UNPIE2 – Add 1</title>
+<title>UNPIE2 – Case 10</title>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script type="module" src="https://webr.r-wasm.org/latest/webr.mjs"></script>
@@ -206,7 +206,7 @@
   async function init(){
     log("Starting WebR…");
     await webr.init();
-    const code=await (await fetch("./r/uadd1.R")).text();
+    const code=await (await fetch("./r/ucase10.R")).text();
     await webr.evalR(code);
     log("WebR ready.");
   }
