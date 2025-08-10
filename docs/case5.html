@@ -144,18 +144,50 @@
       responsive:true,maintainAspectRatio:false,
       scales:{
         x:{ticks: {
-          autoSkip: false,
-          callback: function (value) {
-            // show only the first slot's label for each year; single "T" on very last slot
-            if (value < xBase) return (value % 2 === 0) ? this.getLabelForValue(value) : "";
-            return value === (xTotal - 1) ? "T" : "";
-          }
-        }},
+              autoSkip: false,
+              callback: function (value) {
+                // show only the first slot's label for each year; single "T" on very last slot
+                if (value < xBase) return (value % 2 === 0) ? this.getLabelForValue(value) : "";
+                return value === (xTotal - 1) ? "T" : "";
+              }
+            },
+           title:{display:true,text:"T"}},
         y:{beginAtZero:true,title:{display:true,text:"Value"},ticks:{callback:v=>fmt(v)}}
       },
       plugins:{legend:{display:false}},
       datasets:{bar:{grouped:false,barPercentage:0.95,categoryPercentage:1.0}}
     }});
+
+  function drawChart(t, realPath, nomPath, sumNom, fvNom, fvReal) {
+    // Duplicate each year: [1,1,2,2,...] so we can place orange/grey next to each other
+    const pairLabels = [];
+    const orange = [];
+    const grey   = [];
+    t.forEach((ti, idx) => {
+      pairLabels.push(String(ti), String(ti)); // two slots per year
+      orange.push(realPath[idx], null);        // orange in first slot
+      grey.push(null, nomPath[idx]);           // grey in second slot
+    });
+  
+    // Final bars under a single "T" group (three slots)
+    const labels = [...pairLabels, "T", "T", "T"];
+    xBase  = pairLabels.length;         // number of per-year slots
+    xTotal = labels.length;
+  
+    const green = Array(xTotal).fill(null); green[xBase]   = sumNom; // first T
+    const blue  = Array(xTotal).fill(null); blue[xBase+1]  = fvNom;  // second T
+    const black = Array(xTotal).fill(null); black[xBase+2] = fvReal; // third T
+  
+    bar.data.labels   = labels;
+    bar.data.datasets = [
+      { label: "RealPmt", data: orange, backgroundColor: "#ff9800" },
+      { label: "NomPmt",  data: grey,   backgroundColor: "#9e9e9e" },
+      { label: "SumNom",  data: green,  backgroundColor: "#2e7d32" },
+      { label: "FvNom",   data: blue,   backgroundColor: "#1976d2" },
+      { label: "FvReal",  data: black,  backgroundColor: "#000000" }
+    ];
+    bar.update();
+  }
 
   // WebR
   import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
