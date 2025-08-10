@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>UNPIE2 – Case 3</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module" src="https://webr.r-wasm.org/latest/webr.mjs"></script>
+
+<style>
+  html,body{height:100%;margin:0}
+  body{overflow:hidden;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#fff;color:#111}
+  .app{height:640px;display:grid;place-items:stretch}
+  .wrap{max-width:1100px;margin:0 auto;padding:8px 12px;height:100%;box-sizing:border-box}
+  .title{text-align:center;margin:4px 0 8px;font-size:1.15rem}
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:12px;height:calc(100% - 38px)}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{border:1px solid #e8e8e8;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);background:#fff}
+  .left{padding:10px;overflow:auto}
+  .group{border:1px solid #ddd;border-radius:10px;padding:10px;margin-bottom:10px}
+  .group h3{margin:0 0 8px;font-size:1rem}
+  .row{display:flex;align-items:center;gap:.8rem}
+  .row + .row{margin-top:8px}
+  .val{width:7rem;text-align:right;color:#666;font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%}
+  button{padding:.55rem .9rem;border:0;border-radius:10px;background:#eee;cursor:pointer}
+
+  .right{padding:10px;display:flex;flex-direction:column;height:100%;overflow:hidden}
+  .chartWrap{flex:1 0 auto;height:360px}
+  #bar{width:100%;height:100%}
+  .legend{display:flex;gap:1rem;justify-content:center;margin-top:6px;color:#666;font-size:.92rem;flex:0 0 auto}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:.35rem;vertical-align:middle}
+  .kpis{display:flex;gap:12px;justify-content:center;margin-top:6px;flex:0 0 auto;flex-wrap:wrap}
+  .kpi{background:#f7f7f9;border-radius:10px;padding:.45rem .7rem;font-variant-numeric:tabular-nums}
+  .debug{margin-top:6px;background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;flex:0 0 110px;display:none}
+  pre{margin:0;font-size:.82rem}
+</style>
+</head>
+<body>
+  <div class="app">
+    <div class="wrap">
+      <div class="title" id="title">App 3: Future value of constant periodic payments</div>
+
+      <div class="grid">
+        <!-- Controls -->
+        <div class="panel left">
+          <div class="group">
+            <h3 id="gPmt">Periodic payments</h3>
+            <div class="row">
+              <label for="pmt" style="flex:1" id="lPmt">Payment per year</label>
+              <input id="pmt" type="range" min="1000" max="100000" step="100" value="32600">
+              <div class="val" id="pmtLabel">32,600</div>
+            </div>
+          </div>
+
+          <div class="group">
+            <h3 id="gHor">Time horizon (years)</h3>
+            <div class="row">
+              <label for="nper" style="flex:1" id="lYears">Years</label>
+              <input id="nper" type="range" min="1" max="50" step="1" value="35">
+              <div class="val" id="nperLabel">35</div>
+            </div>
+          </div>
+
+          <div class="group">
+            <h3 id="gRate">Interest rate</h3>
+            <div class="row">
+              <label for="rate" style="flex:1" id="lRate">Rate (per year)</label>
+              <input id="rate" type="range" min="0" max="0.08" step="0.0005" value="0.02">
+              <div class="val" id="rateLabel">2.00%</div>
+            </div>
+          </div>
+
+          <button id="compute">Compute</button>
+        </div>
+
+        <!-- Chart & KPIs -->
+        <div class="panel right">
+          <div class="chartWrap"><canvas id="bar"></canvas></div>
+          <div class="legend">
+            <span><span class="dot" style="background:#ff9800"></span><span id="legPmt">Periodic payment</span></span>
+            <span><span class="dot" style="background:#9e9e9e"></span><span id="legSum">Sum of periodic payments</span></span>
+            <span><span class="dot" style="background:#2e7d32"></span><span id="legFV">Future value</span></span>
+          </div>
+          <div class="kpis">
+            <div class="kpi"><strong id="kpiSumLbl">Sum of payments:</strong> <span id="sumOut">—</span></div>
+            <div class="kpi"><strong id="kpiFvLbl">Future value:</strong> <span id="fvOut">—</span></div>
+          </div>
+          <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    // ---- URL params: lang & debug
+    const params = new URLSearchParams(location.search);
+    const lang = (params.get("lang") || "en_EN").toLowerCase();
+    const debug = (params.get("debug") || "FALSE").toUpperCase() === "TRUE";
+
+    // ---- i18n
+    const I18N = {
+      en_en: {
+        title: "App 3: Future value of constant periodic payments",
+        gPmt: "Periodic payments", lPmt: "Payment per year",
+        gHor: "Time horizon (years)", lYears: "Years",
+        gRate: "Interest rate", lRate: "Rate (per year)",
+        btn: "Compute",
+        legPmt: "Periodic payment", legSum: "Sum of periodic payments", legFV: "Future value",
+        kpiSumLbl: "Sum of payments:", kpiFvLbl: "Future value:"
+      },
+      de_de: {
+        title: "App 3: Zukünftiger Wert konstanter periodischer Sparzahlungen",
+        gPmt: "Periodische Sparzahlungen", lPmt: "Sparzahlung pro Jahr",
+        gHor: "Zeitraum (Jahre)", lYears: "Jahre",
+        gRate: "Zinssatz", lRate: "Zinssatz (pro Jahr)",
+        btn: "Berechnen",
+        legPmt: "Periodische Sparzahlung", legSum: "Summe der periodischen Sparzahlungen", legFV: "Zukünftiger Wert",
+        kpiSumLbl: "Summe der periodischen Sparzahlungen:", kpiFvLbl: "Zukünftiger Wert:"
+      }
+    };
+    const T = I18N[lang] || I18N.en_en;
+    ["title","gPmt","lPmt","gHor","lYears","gRate","lRate","legPmt","legSum","legFV","kpiSumLbl","kpiFvLbl"]
+      .forEach(id => document.getElementById(id).textContent = T[id]);
+    document.getElementById("compute").textContent = T.btn;
+    document.getElementById("debugBox").style.display = debug ? "block" : "none";
+
+    // ---- UI refs
+    const pmtEl = document.getElementById("pmt");
+    const nperEl= document.getElementById("nper");
+    const rateEl= document.getElementById("rate");
+    const pmtLbl= document.getElementById("pmtLabel");
+    const nperLbl=document.getElementById("nperLabel");
+    const rateLbl=document.getElementById("rateLabel");
+    const sumOut=document.getElementById("sumOut");
+    const fvOut = document.getElementById("fvOut");
+    const dbg   = document.getElementById("debug");
+    const fmt=(x,opts={})=>Number(x).toLocaleString(undefined,{maximumFractionDigits:2,...opts});
+    const log=x=>{ if(debug) dbg.textContent = typeof x==="string"?x:JSON.stringify(x,null,2); };
+    function refreshLabels(){
+      pmtLbl.textContent  = fmt(pmtEl.value,{maximumFractionDigits:0});
+      nperLbl.textContent = parseInt(nperEl.value,10);
+      rateLbl.textContent = (parseFloat(rateEl.value)*100).toFixed(2) + "%";
+    }
+    refreshLabels();
+
+    // ---- Chart: orange bars at each year, plus two bars at T (gray, green)
+    const ctx = document.getElementById("bar").getContext("2d");
+    const bar = new Chart(ctx, {
+      type: "bar",
+      data: { labels: [], datasets: [] },
+      options: {
+        responsive:true, maintainAspectRatio:false,
+        scales:{
+          x:{ title:{display:true,text:"T"}, stacked:false },
+          y:{ beginAtZero:true, title:{display:true,text:"Value"}, ticks:{ callback:v=>fmt(v)}}
+        },
+        plugins:{ legend:{ display:false } }
+      }
+    });
+
+    function drawChart(labels, contrib, sumContrib, fv) {
+      bar.data.labels = labels;
+      // Build arrays: per-year orange payments, and final two bars at the last label
+      const n = labels.length;
+      const orange = contrib;                              // length n
+      const gray   = Array(n).fill(null); gray[n-1] = sumContrib;
+      const green  = Array(n).fill(null); green[n-1] = fv;
+      bar.data.datasets = [
+        { label:"Periodic", data:orange, backgroundColor:"#ff9800", barPercentage:0.65, categoryPercentage:0.58, borderSkipped:"end" },
+        { label:"Sum",      data:gray,   backgroundColor:"#9e9e9e", barPercentage:0.65, categoryPercentage:0.58, borderSkipped:"end" },
+        { label:"FV",       data:green,  backgroundColor:"#2e7d32", barPercentage:0.65, categoryPercentage:0.58, borderSkipped:"end" }
+      ];
+      bar.update();
+    }
+
+    // ---- WebR
+    import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
+    const webr = new WebR();
+    function unwrap(x){ if(x==null||typeof x!=="object")return x; if(x.type==="list"){const o={};(x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i]));return o;} if(Array.isArray(x.values)) return x.values.length===1?unwrap(x.values[0]):x.values.map(unwrap); return x; }
+    async function init(){
+      log("Starting WebR…");
+      await webr.init();
+      const code = await (await fetch("./r/ucase3.R")).text();
+      await webr.evalR(code);
+      log("WebR ready. ucase3() loaded.");
+    }
+
+    async function compute(){
+      try{
+        refreshLabels();
+        const pmt = parseFloat(pmtEl.value);
+        const nper= parseInt(nperEl.value,10);
+        const rate= parseFloat(rateEl.value);
+
+        const r = await webr.evalR(`ucase3(pmt=${pmt}, nper=${nper}, rate=${rate})`);
+        const js = unwrap(await r.toJs());
+
+        const sum = js?.results?.sum_contrib;
+        const fv  = js?.results?.fv;
+        const t   = js?.results?.t?.values ?? js?.results?.t;
+        const contrib = js?.results?.contrib_path?.values ?? js?.results?.contrib_path;
+
+        if (typeof sum !== "number" || typeof fv !== "number" || !Array.isArray(contrib)) {
+          throw new Error("Unexpected R result");
+        }
+
+        sumOut.textContent = fmt(sum, { maximumFractionDigits:0 });
+        fvOut.textContent  = fmt(fv);
+        const labels = t.map(x=>String(x));  // "1"..."n"
+        drawChart(labels, contrib, sum, fv);
+        log(js);
+      }catch(e){
+        log("Compute error: " + (e?.message || e));
+      }
+    }
+
+    document.getElementById("compute").addEventListener("click", compute);
+    [pmtEl,nperEl,rateEl].forEach(el=>el.addEventListener("input", compute));
+
+    await init();
+    await compute();
+
+    // apply language to legend texts (after chart created)
+    document.getElementById("legPmt").textContent = T.legPmt;
+    document.getElementById("legSum").textContent = T.legSum;
+    document.getElementById("legFV").textContent  = T.legFV;
+  </script>
+</body>
+</html>
