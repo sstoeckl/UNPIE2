@@ -204,6 +204,23 @@
     import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
     const webr = new WebR();
     function unwrap(x){ if(x==null||typeof x!=="object")return x; if(x.type==="list"){const o={};(x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i]));return o;} if(Array.isArray(x.values)) return x.values.length===1?unwrap(x.values[0]):x.values.map(unwrap); return x; }
+    
+    // Extract a single number from any WebR/JS shape
+    function num(x) {
+      if (typeof x === "number") return x;
+      if (x && typeof x === "object") {
+        if (Array.isArray(x)) return num(x[0]);
+        if ("values" in x)    return num(x.values[0]);
+      }
+      return NaN;
+    }
+    
+    // Extract an array of numbers from any WebR/JS vector shape
+    function arr(x) {
+      if (Array.isArray(x))   return x.map(num);
+      if (x && x.values)      return x.values.map(num);
+      return [];
+    }
 
     async function init(){
       log("Starting WebR…");
@@ -216,32 +233,38 @@
     async function compute(){
       try{
         refreshLabels();
-        const pmt=parseFloat(pmtEl.value), nper=parseInt(nperEl.value,10),
-              rate=parseFloat(rateEl.value), infl=parseFloat(inflEl.value);
-
-        const r = await webr.evalR(`ucase4(pmt=${pmt}, nper=${nper}, rate=${rate}, inflation=${infl})`);
-        const js = unwrap(await r.toJs());
-        const sumNom = js?.results?.sum_nominal;
-        const fvNom  = js?.results?.fv_nominal;
-        const fvReal = js?.results?.fv_real;
-        const t      = js?.results?.t?.values ?? js?.results?.t;
-        const contrib= js?.results?.contrib_path?.values ?? js?.results?.contrib_path;
-
-        if ([sumNom,fvNom,fvReal].some(v => typeof v !== "number") || !Array.isArray(contrib)) {
-          throw new Error("Unexpected R result");
+        const pmt = parseFloat(pmtEl.value);
+        const nper= parseInt(nperEl.value,10);
+        const rate= parseFloat(rateEl.value);
+        const infl= parseFloat(inflEl.value);
+    
+        const r   = await webr.evalR(`ucase4(pmt=${pmt}, nper=${nper}, rate=${rate}, inflation=${infl})`);
+        let js = await r.toJs();
+        if (js && js.type) js = unwrap(js);
+    
+        const res = js?.results || {};
+        const sumNom = num(res.sum_nominal);
+        const fvNom  = num(res.fv_nominal);
+        const fvReal = num(res.fv_real);
+        const t      = arr(res.t);
+        const contrib= arr(res.contrib_path);
+    
+        if (![sumNom,fvNom,fvReal].every(Number.isFinite) || !contrib.length || !t.length) {
+          throw new Error("Shape mismatch");
         }
-
-        sumOut.textContent    = fmt(sumNom, { maximumFractionDigits:0 });
+    
+        sumOut.textContent    = fmt(sumNom, { maximumFractionDigits: 0 });
         fvNomOut.textContent  = fmt(fvNom);
         fvRealOut.textContent = fmt(fvReal);
-
-        const labels = t.map(x=>String(x));
+    
+        const labels = t.map(String);
         drawChart(labels, contrib, sumNom, fvNom, fvReal);
         log(js);
-      }catch(e){
+      } catch (e){
         log("Compute error: " + (e?.message || e));
       }
     }
+        // ---- Event listeners
 
     document.getElementById("compute").addEventListener("click", compute);
     [pmtEl,nperEl,rateEl,inflEl].forEach(el=>el.addEventListener("input", compute));

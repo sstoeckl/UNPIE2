@@ -179,6 +179,24 @@
     import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
     const webr = new WebR();
     function unwrap(x){ if(x==null||typeof x!=="object")return x; if(x.type==="list"){const o={};(x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i]));return o;} if(Array.isArray(x.values)) return x.values.length===1?unwrap(x.values[0]):x.values.map(unwrap); return x; }
+    
+    // Extract a single number from any WebR/JS shape
+    function num(x) {
+      if (typeof x === "number") return x;
+      if (x && typeof x === "object") {
+        if (Array.isArray(x)) return num(x[0]);
+        if ("values" in x)    return num(x.values[0]);
+      }
+      return NaN;
+    }
+    
+    // Extract an array of numbers from any WebR/JS vector shape
+    function arr(x) {
+      if (Array.isArray(x))   return x.map(num);
+      if (x && x.values)      return x.values.map(num);
+      return [];
+    }
+    
     async function init(){
       log("Starting WebR…");
       await webr.init();
@@ -193,25 +211,29 @@
         const pmt = parseFloat(pmtEl.value);
         const nper= parseInt(nperEl.value,10);
         const rate= parseFloat(rateEl.value);
-
-        const r = await webr.evalR(`ucase3(pmt=${pmt}, nper=${nper}, rate=${rate})`);
-        const js = unwrap(await r.toJs());
-
-        const sum = js?.results?.sum_contrib;
-        const fv  = js?.results?.fv;
-        const t   = js?.results?.t?.values ?? js?.results?.t;
-        const contrib = js?.results?.contrib_path?.values ?? js?.results?.contrib_path;
-
-        if (typeof sum !== "number" || typeof fv !== "number" || !Array.isArray(contrib)) {
-          throw new Error("Unexpected R result");
+    
+        const r   = await webr.evalR(`ucase3(pmt=${pmt}, nper=${nper}, rate=${rate})`);
+        // Try the easy path first (WebR sometimes already converts nicely)
+        let js = await r.toJs();
+        if (js && js.type) js = unwrap(js); // if we got the {type,names,values} structure
+    
+        const res = js?.results || {};
+        const sum = num(res.sum_contrib);
+        const fv  = num(res.fv);
+        const t   = arr(res.t);
+        const contrib = arr(res.contrib_path);
+    
+        if (!Number.isFinite(sum) || !Number.isFinite(fv) || !contrib.length || !t.length) {
+          throw new Error("Shape mismatch");
         }
-
-        sumOut.textContent = fmt(sum, { maximumFractionDigits:0 });
+    
+        sumOut.textContent = fmt(sum, { maximumFractionDigits: 0 });
         fvOut.textContent  = fmt(fv);
-        const labels = t.map(x=>String(x));  // "1"..."n"
+    
+        const labels = t.map(String);
         drawChart(labels, contrib, sum, fv);
         log(js);
-      }catch(e){
+      } catch (e){
         log("Compute error: " + (e?.message || e));
       }
     }
