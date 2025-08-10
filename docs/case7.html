@@ -194,8 +194,7 @@
   async function init(){
     log("Starting WebR…");
     await webr.init();
-    // Load R function (either keep inline or replace with fetch('./r/ucase7.R'))
-    const rCode = `./r/ucase5.R`;
+    const rCode = `./r/ucase7.R`;
     await webr.evalR(rCode);
     log("WebR ready.");
   }
