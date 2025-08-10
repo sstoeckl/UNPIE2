@@ -135,25 +135,26 @@
       datasets:{bar:{grouped:false,barPercentage:1.0,categoryPercentage:1.0}}
     }});
 
-  function drawChart(t, expensePath, sumExp, pvReq){
-    // labels: two "0" slots for grey/green start bars, then 1..n, then a final T slot
-    const n=t.length;
-    xBase = n + 1; // (we'll offset numeric ticks by 1 due to the initial pair)
-    const labels=["0","0", ...t.map(String), "T"];
+  // Replace your existing drawChart in case6.html with this one
+  function drawChart(t, expensePath, sumExp, pvReq) {
+    // Two "0" slots at start for grey/green; then 1..n. No trailing "T" category.
+    const labels = ["0", "0", ...t.map(String)];
+    xBase  = t.length + 1;      // used by your tick formatter (keeps 'T' printed on last tick if you want)
     xTotal = labels.length;
-
-    const orange = [null,null, ...expensePath, null];
-    const grey   = Array(xTotal).fill(null); grey[0] = sumExp;     // first "0"
-    const green  = Array(xTotal).fill(null); green[1] = pvReq;     // second "0"
-
-    bar.data.labels=labels;
-    bar.data.datasets=[
-      {label:"Sum",  data:grey,  backgroundColor:"#9e9e9e"},
-      {label:"PV",   data:green, backgroundColor:"#2e7d32"},
-      {label:"Pmt",  data:orange,backgroundColor:"#ff9800"}
+  
+    const orange = [null, null, ...expensePath];    // periodic expenses along the years
+    const grey   = Array(xTotal).fill(null); grey[0] = sumExp;  // first "0"
+    const green  = Array(xTotal).fill(null); green[1] = pvReq;  // second "0"
+  
+    bar.data.labels   = labels;
+    bar.data.datasets = [
+      { label: "Sum", data: grey,   backgroundColor: "#9e9e9e" },
+      { label: "PV",  data: green,  backgroundColor: "#2e7d32" },
+      { label: "Pmt", data: orange, backgroundColor: "#ff9800" }
     ];
     bar.update();
   }
+
 
   // WebR
   import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";

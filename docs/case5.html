@@ -143,35 +143,19 @@
     options:{
       responsive:true,maintainAspectRatio:false,
       scales:{
-        x:{ticks:{autoSkip:false,callback:function(v){ if(v<xBase) return this.getLabelForValue(v); return v===(xTotal-1)?"T":""; }},
-           title:{display:true,text:"T"}},
+        x:{ticks: {
+          autoSkip: false,
+          callback: function (value) {
+            // show only the first slot's label for each year; single "T" on very last slot
+            if (value < xBase) return (value % 2 === 0) ? this.getLabelForValue(value) : "";
+            return value === (xTotal - 1) ? "T" : "";
+          }
+        }},
         y:{beginAtZero:true,title:{display:true,text:"Value"},ticks:{callback:v=>fmt(v)}}
       },
       plugins:{legend:{display:false}},
-      datasets:{bar:{grouped:false,barPercentage:1.0,categoryPercentage:1.0}}
+      datasets:{bar:{grouped:false,barPercentage:0.95,categoryPercentage:1.0}}
     }});
-
-  function drawChart(t, realPath, nomPath, sumNom, fvNom, fvReal){
-    xBase=t.length;
-    const labels=[...t.map(String),"T","T","T"];
-    xTotal=labels.length;
-
-    const orange=[...realPath,null,null,null];
-    const gray  =[...nomPath ,null,null,null];
-    const green =Array(xTotal).fill(null); green[xBase]   = sumNom;
-    const blue  =Array(xTotal).fill(null); blue[xBase+1]  = fvNom;
-    const black =Array(xTotal).fill(null); black[xBase+2] = fvReal;
-
-    bar.data.labels=labels;
-    bar.data.datasets=[
-      {label:"RealPmt", data:orange, backgroundColor:"#ff9800"},
-      {label:"NomPmt",  data:gray,   backgroundColor:"#9e9e9e"},
-      {label:"SumNom",  data:green,  backgroundColor:"#2e7d32"},
-      {label:"FvNom",   data:blue,   backgroundColor:"#1976d2"},
-      {label:"FvReal",  data:black,  backgroundColor:"#000000"}
-    ];
-    bar.update();
-  }
 
   // WebR
   import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
