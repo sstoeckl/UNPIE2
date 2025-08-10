@@ -168,9 +168,9 @@
       const gray   = Array(n).fill(null); gray[n-1] = sumContrib;
       const green  = Array(n).fill(null); green[n-1] = fv;
       bar.data.datasets = [
-        { label:"Periodic", data:orange, backgroundColor:"#ff9800", barPercentage:0.95, categoryPercentage:0.58, borderSkipped:"end" },
-        { label:"Sum",      data:gray,   backgroundColor:"#9e9e9e", barPercentage:0.95, categoryPercentage:0.58, borderSkipped:"end" },
-        { label:"FV",       data:green,  backgroundColor:"#2e7d32", barPercentage:0.95, categoryPercentage:0.58, borderSkipped:"end" }
+        { label:"Periodic", data:orange, backgroundColor:"#ff9800", barPercentage:0.95, categoryPercentage:1.0, borderSkipped:"end" },
+        { label:"Sum",      data:gray,   backgroundColor:"#9e9e9e", barPercentage:0.95, categoryPercentage:1.0, borderSkipped:"end" },
+        { label:"FV",       data:green,  backgroundColor:"#2e7d32", barPercentage:0.95, categoryPercentage:1.0, borderSkipped:"end" }
       ];
       bar.update();
     }
