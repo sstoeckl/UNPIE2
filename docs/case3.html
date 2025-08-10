@@ -151,41 +151,53 @@
       type: "bar",
       data: { labels: [], datasets: [] },
       options: {
-        responsive:true, maintainAspectRatio:false,
-        scales:{
-          x:{ title:{display:true,text:"T"}, stacked:false },
-          y:{ beginAtZero:true, title:{display:true,text:"Value"}, ticks:{ callback:v=>fmt(v)}}
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: {
+            title: { display: true, text: "T" },
+            ticks: {
+              autoSkip: false,
+              // die letzten beiden Kategorien als "T" beschriften
+              callback: (val, idx, ticks) => {
+                const last = ticks.length - 1;
+                const prev = ticks.length - 2;
+                return (idx === last || idx === prev) ? "T" : ticks[idx].label;
+              }
+            }
+          },
+          y: { beginAtZero: true, title: { display: true, text: "Value" }, ticks: { callback: v => fmt(v) } }
         },
-        plugins:{ legend:{ display:false } },
-        // <- NEW: make all bars wide and overlap within the same category
+        plugins: { legend: { display: false } },
         datasets: {
           bar: {
-            grouped: false,          // <- wichtig! (überlagern statt nebeneinander)
-            barPercentage: 1.0,      // volle Breite je Kategorie
+            grouped: false,          // <- NICHT gruppieren (volle Breite, überlagern wenn gleiche Kategorie)
+            barPercentage: 1.0,
             categoryPercentage: 1.0
           }
         }
       }
     });
 
-    function drawChart(labels, contrib, sumContrib, fv) {
-      const n = labels.length;
+    function drawChart(t, contrib, sumContrib, fv) {
+      // Kategorien: 1..n sowie am Ende zwei Extra-Kategorien für die Endbalken
+      const n = t.length;
+      const labels = [...t.map(String), "T", "T"];
+    
+      // Datenreihen:
+      const orange = [...contrib, null, null]; // Perioden-Zahlungen nur 1..n
+      const gray   = Array(n + 2).fill(null);  gray[n]   = sumContrib; // erstes "T"
+      const green  = Array(n + 2).fill(null);  green[n+1]= fv;         // zweites "T"
     
       bar.data.labels = labels;
       bar.data.datasets = [
-        // periodic payments (all years)
-        { label: "Periodic", data: contrib, backgroundColor: "#ff9800" },
-    
-        // end-of-horizon bars (only last category has a value)
-        { label: "Sum", data: Array(n).fill(null).map((_, i) => i === n - 1 ? sumContrib : null),
-          backgroundColor: "#9e9e9e" },
-    
-        { label: "FV",  data: Array(n).fill(null).map((_, i) => i === n - 1 ? fv : null),
-          backgroundColor: "#2e7d32" }
+        { label:"Periodic", data: orange, backgroundColor:"#ff9800" },
+        { label:"Sum",      data: gray,   backgroundColor:"#9e9e9e" },
+        { label:"FV",       data: green,  backgroundColor:"#2e7d32" }
       ];
-    
       bar.update();
     }
+
 
     // ---- WebR
     import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
