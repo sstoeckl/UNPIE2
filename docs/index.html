@@ -42,74 +42,79 @@
   <pre id="out">Waiting…</pre>
 
 <script type="module">
+  // ===== Minimal helper to show messages in the Debug box
   const out = document.getElementById("out");
   const fvSpan = document.getElementById("fv");
-
   function log(msg, obj) {
-    out.textContent = (typeof msg === "string" ? msg : JSON.stringify(msg, null, 2))
-      + (obj ? "\n" + JSON.stringify(obj, null, 2) : "");
+    out.textContent =
+      (typeof msg === "string" ? msg : JSON.stringify(msg, null, 2)) +
+      (obj ? "\n" + JSON.stringify(obj, null, 2) : "");
   }
 
-  async function loadWebR() {
+  // ===== WebR setup
+  import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
+  const webR = new WebR();
+
+  // Convert WebR's {type,names,values} objects into plain JS
+  function unwrap(x) {
+    if (x == null || typeof x !== "object") return x;
+    if (x.type === "list") {
+      const o = {};
+      (x.names || []).forEach((k, i) => (o[k] = unwrap(x.values[i])));
+      return o;
+    }
+    if (Array.isArray(x.values)) {
+      // atomic vectors are wrapped as {values:[...]}
+      if (x.values.length === 1) return unwrap(x.values[0]);
+      return x.values.map(unwrap);
+    }
+    return x;
+  }
+
+  async function init() {
     try {
-      const { WebR } = await import("https://webr.r-wasm.org/latest/webr.mjs");
-      const webR = new WebR();
       log("Starting WebR…");
       await webR.init();
-      log("WebR ready.");
-
-      // 1) Try to load your file from ./r/ucase1.R
-      try {
-        const url = "./r/ucase1.R"; // case-sensitive on GitHub Pages
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error(`Fetch failed ${resp.status} ${resp.statusText}`);
-        const code = await resp.text();
-        if (!code.trim()) throw new Error("R file is empty");
-        await webR.evalR(code);
-        log("Loaded R file ucase1.R");
-      } catch (e) {
-        // 2) Fallback: define ucase1 inline so the page still works
-        log("Could not load r/ucase1.R. Using inline fallback.\n" + e.message);
-        await webR.evalR(`
-          ucase1 <- function(rate, nper, pv) {
-            stopifnot(is.numeric(rate), is.numeric(nper), is.numeric(pv))
-            fv <- (-pv) * (1 + rate)^nper
-            list(ok=TRUE, inputs=list(rate=rate,nper=nper,pv=pv), results=list(fv=fv))
-          }
-        `);
-      }
-
-      async function runOnce() {
-        try {
-          const rate = parseFloat(document.getElementById("rate").value);
-          const nper = parseInt(document.getElementById("nper").value, 10);
-          const pv   = parseFloat(document.getElementById("pv").value);
-          const r = await webR.evalR(`ucase1(rate=${rate}, nper=${nper}, pv=${pv})`);
-          // Force full conversion to plain JS
-          const js = await r.toJs({ convert: true });
-          // Defensive shape check
-          const fv = js?.results?.fv ?? (Array.isArray(js) ? js[0] : undefined);
-          if (typeof fv !== "number") {
-            log("Unexpected result shape from R:", js);
-            fvSpan.textContent = "n/a";
-            return;
-          }
-          fvSpan.textContent = fv.toFixed(2);
-          log(js);
-        } catch (err) {
-          log("Error when running ucase1(): " + (err?.message || err));
-          fvSpan.textContent = "n/a";
-        }
-      }
-
-      document.getElementById("run").addEventListener("click", runOnce);
-      await runOnce();
-    } catch (err) {
-      log("Fatal error initializing WebR: " + (err?.message || err));
+      // Load your R function file (case‑sensitive path on GitHub Pages)
+      const resp = await fetch("./r/ucase1.R");
+      if (!resp.ok) throw new Error(`Could not fetch r/ucase1.R (${resp.status})`);
+      const code = await resp.text();
+      await webR.evalR(code);
+      log("WebR ready. ucase1() loaded.");
+    } catch (e) {
+      log("Init error: " + (e?.message || e));
+      throw e;
     }
   }
 
-  loadWebR();
+  async function runOnce() {
+    try {
+      const rate = parseFloat(document.getElementById("rate").value);
+      const nper = parseInt(document.getElementById("nper").value, 10);
+      const pv   = parseFloat(document.getElementById("pv").value);
+
+      // Call the R function; returns a WebR object
+      const rObj = await webR.evalR(`ucase1(rate=${rate}, nper=${nper}, pv=${pv})`);
+      const raw  = await rObj.toJs();
+      const js   = unwrap(raw); // -> { ok, inputs:{...}, results:{ fv: ... } }
+
+      const fv = js?.results?.fv;
+      if (typeof fv !== "number") {
+        log("Unexpected result shape from R:", js);
+        fvSpan.textContent = "n/a";
+        return;
+      }
+      fvSpan.textContent = fv.toFixed(2);
+      log(js);
+    } catch (e) {
+      fvSpan.textContent = "n/a";
+      log("Run error: " + (e?.message || e));
+    }
+  }
+
+  document.getElementById("run").addEventListener("click", runOnce);
+  await init();
+  await runOnce(); // auto-run once on load
 </script>
 </body>
 </html>
