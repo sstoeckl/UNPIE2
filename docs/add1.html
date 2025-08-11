@@ -212,66 +212,65 @@
   }
 
   async function compute(){
-    try {
-      refresh();
-  
-      const p  = +pmtEl.value;
-      const n  = parseInt(nperEl.value, 10);
-      const mu = +muEl.value;
-      const s  = +volEl.value;
-      const c  = +convEl.value;
-  
-      const r = await webr.evalR(`
-        (function(){
-          out <- uadd1(
-            pmt_real=${p}, nper=${n}, mu_real=${mu}, vol_real=${s}, conv=${c},
-            n_scen=10000, n_show=10, seed=42
-          )
-          list(
-            t  = out$results$t,
-            qW = out$results$quantiles_wealth,
-            qP = out$results$quantiles_pension,
-            paths = asplit(out$results$paths, 1L)
-          )
-        })()
-      `);
-  
-      let js = await r.toJs();
-      if (js && js.type) js = unwrap(js);
-  
-      // helpers: normalize anything to plain arrays of numbers
-      const vec = x => {
-        if (x == null) return [];
-        if (typeof x === "number") return [x];
-        if (Array.isArray(x)) return x.map(Number);
-        if (x.values && Array.isArray(x.values)) return x.values.map(Number);
-        return [];
-      };
-      const listify = x => {
-        if (x == null) return [];
-        if (Array.isArray(x)) return x;
-        if (x.values && Array.isArray(x.values)) return x.values; // WebR list
-        if (typeof x === "object") return Object.values(x);       // unwrap() list-object
-        return [];
-      };
-  
-      const t     = vec(js.t);
-      const qW    = vec(js.qW);
-      const qP    = vec(js.qP);
-      const paths = listify(js.paths).map(vec);  // <- the crucial fix
-  
-      drawPaths(t, paths);
-      renderRow(wealthRow, qW);
-      renderRow(pensionRow, qP);
-  
-      log({tLen: t.length, nPaths: paths.length, rowLen: paths[0]?.length});
-    } catch (e) {
-      log("Compute error: " + (e?.message || e));
-    }
+  try {
+    refresh();
+
+    const p  = +pmtEl.value;
+    const n  = parseInt(nperEl.value, 10);
+    const mu = +muEl.value;
+    const s  = +volEl.value;
+    const c  = +convEl.value;
+
+    const r = await webr.evalR(`
+      (function(){
+        out <- uadd1(
+          pmt_real=${p}, nper=${n}, mu_real=${mu}, vol_real=${s}, conv=${c},
+          n_scen=10000, n_show=10, seed=42
+        )
+        list(
+          t  = out$results$t,
+          qW = out$results$quantiles_wealth,
+          qP = out$results$quantiles_pension,
+          paths = asplit(out$results$paths, 1L)
+        )
+      })()
+    `);
+
+    let js = await r.toJs();
+    if (js && js.type) js = unwrap(js);
+
+    // helpers: normalize anything to plain arrays of numbers
+    const vec = x => {
+      if (x == null) return [];
+      if (typeof x === "number") return [x];
+      if (Array.isArray(x)) return x.map(Number);
+      if (x.values && Array.isArray(x.values)) return x.values.map(Number);
+      return [];
+    };
+    const listify = x => {
+      if (x == null) return [];
+      if (Array.isArray(x)) return x;
+      if (x.values && Array.isArray(x.values)) return x.values; // WebR list
+      if (typeof x === "object") return Object.values(x);       // unwrap() list-object
+      return [];
+    };
+
+    const t     = vec(js.t);
+    const qW    = vec(js.qW);
+    const qP    = vec(js.qP);
+    const paths = listify(js.paths).map(vec);  // <- the crucial fix
+
+    drawPaths(t, paths);
+    renderRow(wealthRow, qW);
+    renderRow(pensionRow, qP);
+
+    log({tLen: t.length, nPaths: paths.length, rowLen: paths[0]?.length});
+  } catch (e) {
+    log("Compute error: " + (e?.message || e));
   }
+}
 
-
-    // Event listeners
+  // Event listeners
 
   document.getElementById("compute").addEventListener("click", compute);
   [pmtEl,nperEl,muEl,volEl,convEl].forEach(el=>el.addEventListener("input", compute));
