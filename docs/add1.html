@@ -221,48 +221,87 @@
       const s  = +volEl.value;
       const c  = +convEl.value;
   
+      // 1) R aufrufen – keine Konvertierung in R, einfach die rohen Strukturen zurückgeben
       const r = await webr.evalR(`
-        (function(){
-          out <- uadd1(
-            pmt_real=${p}, nper=${n}, mu_real=${mu}, vol_real=${s}, conv=${c},
-            n_scen=10000, n_show=10, seed=42
-          )
-          W <- out$results$paths
-          list(
-            t  = as.numeric(out$results$t),
-            qW = as.numeric(out$results$quantiles_wealth),
-            qP = as.numeric(out$results$quantiles_pension),
-            paths = lapply(1:nrow(W), function(i) as.numeric(W[i, ]))
-          )
-        })()
+        out <- uadd1(
+          pmt_real=${p}, nper=${n}, mu_real=${mu}, vol_real=${s}, conv=${c},
+          n_scen=10000, n_show=10, seed=42
+        )
+        out
       `);
   
-      let js = await r.toJs();
+      // 2) Nach JS heben (ohne eigenes unwrap)
+      const js = await r.toJs();
+      const R  = js && js.values
+        ? js.values[js.names.indexOf('results')]           // list element "results"
+        : js.results;
   
-      // unwrap WebR object -> plain JS
-      function unwrap(x){
-        if (x && typeof x === "object" && "values" in x) {
-          return x.values.map(unwrap);
+      // --- kleine Helfer, die NUR auf .values/.dim prüfen ---
+      const getVec = (obj) => {
+        if (!obj) return [];
+        // WebR vector (double/int/logical) -> has .values
+        if (typeof obj === 'object' && Array.isArray(obj.values)) return obj.values.map(Number);
+        // Plain JS array (fallback)
+        if (Array.isArray(obj)) return obj.map(Number);
+        // Single number
+        if (typeof obj === 'number') return [obj];
+        return [];
+      };
+  
+      const getDim = (obj) => {
+        if (!obj) return [0,0];
+        // dim ist selbst ein WebR-Integer-Vektor
+        if (obj.dim && obj.dim.values && Array.isArray(obj.dim.values)) {
+          return obj.dim.values.map(Number); // [nrow, ncol]
         }
-        return x;
+        // manchmal ist dim schon plain array
+        if (obj.dim && Array.isArray(obj.dim)) return obj.dim.map(Number);
+        return [0,0];
+      };
+  
+      // 3) Einzelteile holen
+      const tObj     = R.values[R.names.indexOf('t')];
+      const qWObj    = R.values[R.names.indexOf('quantiles_wealth')];
+      const qPObj    = R.values[R.names.indexOf('quantiles_pension')];
+      const pathsObj = R.values[R.names.indexOf('paths')];
+  
+      const t  = getVec(tObj);
+      const qW = getVec(qWObj);
+      const qP = getVec(qPObj);
+  
+      // 4) Pfade rekonstruieren (Matrix in column‑major)
+      //    pathsObj ist eine Matrix: { values: [...], dim: [nrow, ncol] }
+      const vals = getVec(pathsObj);        // flache Zahlen
+      const [nrow, ncol] = getDim(pathsObj);
+  
+      const paths = [];
+      if (nrow > 0 && ncol > 0 && vals.length === nrow * ncol) {
+        for (let rIdx = 0; rIdx < nrow; rIdx++) {
+          const row = [];
+          for (let cIdx = 0; cIdx < ncol; cIdx++) {
+            row.push( vals[rIdx + cIdx * nrow] );   // column‑major!
+          }
+          paths.push(row);
+        }
       }
-      js = unwrap(js);
   
-      const t     = js.t || [];
-      const qW    = js.qW || [];
-      const qP    = js.qP || [];
-      const paths = js.paths || [];
-  
+      // 5) Plot & KPIs
       drawPaths(t, paths);
       renderRow(wealthRow, qW);
       renderRow(pensionRow, qP);
   
-      log({ tLen: t.length, nPaths: paths.length, rowLen: paths[0]?.length ?? 0 });
+      // Debug
+      const dbgObj = { tLen: t.length, nPaths: paths.length, rowLen: paths[0]?.length || 0, nrow, ncol, flatLen: vals.length };
+      console.log(dbgObj);
+      const dbgEl = document.getElementById('debug');
+      if (dbgEl) dbgEl.textContent = JSON.stringify(dbgObj, null, 2);
+  
     } catch (e) {
-      log("Compute error: " + (e?.message || e));
+      const dbgEl = document.getElementById('debug');
+      if (dbgEl) dbgEl.textContent = "Compute error: " + (e?.message || e);
+      console.error(e);
     }
   }
-
 
   // Event listeners
 
