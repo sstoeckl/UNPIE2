@@ -221,7 +221,6 @@
       const s  = +volEl.value;
       const c  = +convEl.value;
   
-      // Ask R to return clean JSON (arrays only) — no WebR vector/list gymnastics.
       const r = await webr.evalR(`
         (function(){
           out <- uadd1(
@@ -229,34 +228,30 @@
             n_scen=10000, n_show=10, seed=42
           )
           W <- out$results$paths
-          payload <- list(
+          list(
             t  = as.numeric(out$results$t),
             qW = as.numeric(out$results$quantiles_wealth),
             qP = as.numeric(out$results$quantiles_pension),
-            paths = asplit(W, 1L)  # list of row vectors
+            paths = lapply(1:nrow(W), function(i) as.numeric(W[i, ]))
           )
-          # turn each row to numeric to avoid integer64 surprises
-          payload$paths <- lapply(payload$paths, as.numeric)
-  
-          # serialize to JSON so JS gets plain arrays
-          jsonlite::toJSON(payload, auto_unbox = TRUE)
         })()
       `);
   
-      // WebR returns an R character vector of length 1 -> unwrap and parse
       let js = await r.toJs();
-      // If it's a WebR vector object, take the first element; if it's already a string, keep it.
-      const jsonStr =
-        (js && typeof js === "object" && js.values && js.values.length)
-          ? js.values[0]
-          : (Array.isArray(js) ? js[0] : js);
   
-      const payload = JSON.parse(jsonStr);
+      // unwrap WebR object -> plain JS
+      function unwrap(x){
+        if (x && typeof x === "object" && "values" in x) {
+          return x.values.map(unwrap);
+        }
+        return x;
+      }
+      js = unwrap(js);
   
-      const t     = payload.t || [];
-      const qW    = payload.qW || [];
-      const qP    = payload.qP || [];
-      const paths = (payload.paths || []).map(row => Array.from(row));
+      const t     = js.t || [];
+      const qW    = js.qW || [];
+      const qP    = js.qP || [];
+      const paths = js.paths || [];
   
       drawPaths(t, paths);
       renderRow(wealthRow, qW);
