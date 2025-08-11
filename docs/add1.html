@@ -114,9 +114,13 @@
 
 <script type="module">
   // Params / i18n
-  const params=new URLSearchParams(location.search);
-  const lang =(params.get("lang") || "en_EN").toLowerCase();
-  const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
+  // URL params
+  const params = new URLSearchParams(location.search);
+  const lang   = (params.get("lang")   || "en_EN").toLowerCase();
+  const debug  = (params.get("debug")  || "FALSE").toUpperCase() === "TRUE";
+  const seedQS = params.get("seed"); // NEW: seed from query string
+  // If not given => NULL in R, else parseInt
+  const seedVal = seedQS ? parseInt(seedQS, 10) : null;
 
   const I18N={
     en_en:{title:"App 10: Real yearly pension resulting from constant (real) yearly savings",
@@ -225,7 +229,8 @@
       const r = await webr.evalR(`
         out <- uadd1(
           pmt_real=${p}, nper=${n}, mu_real=${mu}, vol_real=${s}, conv=${c},
-          n_scen=10000, n_show=10, seed=42
+          n_scen=10000, n_show=10,
+          seed=${seedVal !== null ? seedVal : "NULL"}
         )
         out
       `);
