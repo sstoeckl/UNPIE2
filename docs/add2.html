@@ -33,6 +33,13 @@
   .kpi table{border-collapse:separate;border-spacing:6px;margin:0 auto}
   .kpi th{background:#ebedf0;color:#333;padding:.35rem .6rem;border-radius:8px}
   .kpi td{background:#f7f7f9;padding:.35rem .6rem;border-radius:8px;font-variant-numeric:tabular-nums}
+  .kpiTable { border-collapse: separate; border-spacing: 6px; margin: 0 auto; }
+  .kpiTable th, .kpiTable td {
+    background:#f7f7f9; padding:.45rem .6rem; border-radius:8px;
+    font-variant-numeric: tabular-nums;
+    text-align: right; white-space: nowrap;
+  }
+.kpiTable th.label { background:#ebedf0; color:#333; text-align:left; }
   .debug{margin-top:6px;background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;flex:0 0 110px;display:none}
   pre{margin:0;font-size:.82rem}
 </style>
@@ -89,18 +96,18 @@
       <div class="panel right">
         <div class="chartWrap"><canvas id="line"></canvas></div>
 
-        <div class="kpi">
-          <table>
-            <tr>
-              <th id="kYearsHdr">Time since entering retirement phase (years):</th>
-              <td id="yearsRow"></td>
-            </tr>
-            <tr>
-              <th id="kRuinsHdr">Number of ruins after N years:</th>
-              <td id="ruinsRow"></td>
-            </tr>
-          </table>
-        </div>
+          <div class="kpi">
+            <table class="kpiTable" id="kpiTableAdd2">
+              <tr id="add2RowHeader">
+                <th class="label" id="kYearsHdr">Time since entering retirement phase (years):</th>
+                <!-- dynamic year cells -->
+              </tr>
+              <tr id="add2RowCounts">
+                <th class="label" id="kRuinsHdr">Number of ruins after N years:</th>
+                <!-- dynamic count cells -->
+              </tr>
+            </table>
+          </div>
 
         <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
       </div>
@@ -187,6 +194,20 @@
   function renderInlineCells(el, arr){
     el.innerHTML = (arr||[]).map(v=>`<span style="background:#f7f7f9;border-radius:8px;padding:.35rem .6rem;margin-right:6px;display:inline-block">${fmt(v)}</span>`).join("");
   }
+  
+  function renderKpiTableAdd2(years, counts) {
+    const hdr = document.getElementById("add2RowHeader");
+    const cnt = document.getElementById("add2RowCounts");
+    // keep first cell (the label), remove the rest
+    hdr.querySelectorAll("td").forEach(td => td.remove());
+    cnt.querySelectorAll("td").forEach(td => td.remove());
+    (years || []).forEach(y => {
+      const td = document.createElement("td"); td.textContent = Number(y).toLocaleString(); hdr.appendChild(td);
+    });
+    (counts || []).forEach(v => {
+      const td = document.createElement("td"); td.textContent = Number(v).toLocaleString(); cnt.appendChild(td);
+    });
+  }
 
   // WebR
   import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
@@ -253,8 +274,7 @@
       }
 
       drawPaths(tArr, paths);
-      renderInlineCells(yearsCell, qYears);
-      renderInlineCells(ruinsCell, qCnt);
+      renderKpiTableAdd2(qYears, qCnt);
 
       if (debug) log({tLen:tArr.length,nPaths:paths.length,rowLen:paths[0]?.length||0,years:qYears,counts:qCnt});
     }catch(e){

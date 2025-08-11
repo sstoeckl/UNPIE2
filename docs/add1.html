@@ -32,6 +32,11 @@
   .kpi{margin-top:8px}
   .kpi table{border-collapse:separate;border-spacing:6px}
   .kpi td{background:#f7f7f9;padding:.35rem .5rem;border-radius:8px;font-variant-numeric:tabular-nums}
+  .kpiTable th, .kpiTable td {
+    background:#f7f7f9; padding:.45rem .6rem; border-radius:8px;
+    font-variant-numeric: tabular-nums;
+    text-align: right; white-space: nowrap;
+  }
   .debug{margin-top:6px;background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;flex:0 0 110px;display:none}
   pre{margin:0;font-size:.82rem}
 </style>
@@ -97,13 +102,20 @@
         <div class="chartWrap"><canvas id="line"></canvas></div>
 
         <div class="kpi">
-          <div><strong id="kWealth">Future value of savings (real):</strong></div>
-          <table id="wealthRow"></table>
-        </div>
-
-        <div class="kpi">
-          <div><strong id="kPens">Lifelong pension (real):</strong></div>
-          <table id="pensionRow"></table>
+          <table class="kpiTable" id="kpiTableAdd1">
+            <tr id="add1RowHeader">
+              <th class="label">Percentile:</th>
+              <!-- dynamic p% cells -->
+            </tr>
+            <tr id="add1RowWealth">
+              <th class="label" id="kWealth">Future value of savings (real):</th>
+              <!-- dynamic FV cells -->
+            </tr>
+            <tr id="add1RowPension">
+              <th class="label" id="kPens">Lifelong pension (real):</th>
+              <!-- dynamic Pension cells -->
+            </tr>
+          </table>
         </div>
 
         <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
@@ -197,6 +209,33 @@
       tr.appendChild(td);
     });
     tbl.innerHTML=""; tbl.appendChild(tr);
+  }
+  
+  function renderKpiTableAdd1(probs, qW, qP) {
+    const hdr = document.getElementById("add1RowHeader");
+    const rowW = document.getElementById("add1RowWealth");
+    const rowP = document.getElementById("add1RowPension");
+  
+    // clear existing dynamic cells (keep first label th)
+    [hdr, rowW, rowP].forEach(tr => tr.querySelectorAll("td").forEach(td => td.remove()));
+  
+    (probs || []).forEach(p => {
+      const td = document.createElement("td");
+      td.textContent = `${Math.round(Number(p)*100)}%`;
+      hdr.appendChild(td);
+    });
+  
+    (qW || []).forEach(v => {
+      const td = document.createElement("td");
+      td.textContent = Number(v).toLocaleString();
+      rowW.appendChild(td);
+    });
+  
+    (qP || []).forEach(v => {
+      const td = document.createElement("td");
+      td.textContent = Number(v).toLocaleString();
+      rowP.appendChild(td);
+    });
   }
 
   // WebR
@@ -304,8 +343,9 @@
   
       // 5) Zeichnen & KPIs
       drawPaths(tArr, paths);
-      renderRow(wealthRow, qW);
-      renderRow(pensionRow, qP);
+      // make sure you extract probs from R as well:
+      const probs = vec(getListElem(results, "probs")) || []; // or wherever you already have it
+      renderKpiTableAdd1(probs, qW, qP);
   
       // Debug
       const dbgObj = { tLen: tArr.length, nPaths: paths.length, rowLen: paths[0]?.length || 0, nrow, ncol, flatLen: flat.length };
