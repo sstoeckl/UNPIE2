@@ -212,63 +212,53 @@
   }
 
   async function compute(){
-  try {
-    refresh();
-
-    const p  = +pmtEl.value;
-    const n  = parseInt(nperEl.value, 10);
-    const mu = +muEl.value;
-    const s  = +volEl.value;
-    const c  = +convEl.value;
-
-    const r = await webr.evalR(`
-      (function(){
-        out <- uadd1(
-          pmt_real=${p}, nper=${n}, mu_real=${mu}, vol_real=${s}, conv=${c},
-          n_scen=10000, n_show=10, seed=42
-        )
-        list(
-          t  = out$results$t,
-          qW = out$results$quantiles_wealth,
-          qP = out$results$quantiles_pension,
-          paths = asplit(out$results$paths, 1L)
-        )
-      })()
-    `);
-
-    let js = await r.toJs();
-    if (js && js.type) js = unwrap(js);
-
-    // helpers: normalize anything to plain arrays of numbers
-    const vec = x => {
-      if (x == null) return [];
-      if (typeof x === "number") return [x];
-      if (Array.isArray(x)) return x.map(Number);
-      if (x.values && Array.isArray(x.values)) return x.values.map(Number);
-      return [];
-    };
-    const listify = x => {
-      if (x == null) return [];
-      if (Array.isArray(x)) return x;
-      if (x.values && Array.isArray(x.values)) return x.values; // WebR list
-      if (typeof x === "object") return Object.values(x);       // unwrap() list-object
-      return [];
-    };
-
-    const t     = vec(js.t);
-    const qW    = vec(js.qW);
-    const qP    = vec(js.qP);
-    const paths = listify(js.paths).map(vec);  // <- the crucial fix
-
-    drawPaths(t, paths);
-    renderRow(wealthRow, qW);
-    renderRow(pensionRow, qP);
-
-    log({tLen: t.length, nPaths: paths.length, rowLen: paths[0]?.length});
-  } catch (e) {
-    log("Compute error: " + (e?.message || e));
+    try {
+      refresh();
+  
+      const p  = +pmtEl.value;
+      const n  = parseInt(nperEl.value, 10);
+      const mu = +muEl.value;
+      const s  = +volEl.value;
+      const c  = +convEl.value;
+  
+      // Build a plain, JSON-friendly structure in R (no matrices/lists-with-attributes)
+      const r = await webr.evalR(`
+        (function(){
+          out <- uadd1(
+            pmt_real=${p}, nper=${n}, mu_real=${mu}, vol_real=${s}, conv=${c},
+            n_scen=10000, n_show=10, seed=42
+          )
+          t  <- as.numeric(out$results$t)
+          qW <- as.numeric(out$results$quantiles_wealth)
+          qP <- as.numeric(out$results$quantiles_pension)
+          # matrix -> list of numeric vectors (rows)
+          P  <- lapply(seq_len(nrow(out$results$paths)), function(i) as.numeric(out$results$paths[i,]))
+          list(t=t, qW=qW, qP=qP, paths=P)
+        })()
+      `);
+  
+      let js = await r.toJs();
+      if (js && js.type) js = unwrap(js); // your existing unwrap helper is fine
+  
+      // Now everything should already be plain arrays
+      const t     = Array.isArray(js.t)   ? js.t.map(Number)   : [];
+      const qW    = Array.isArray(js.qW)  ? js.qW.map(Number)  : [];
+      const qP    = Array.isArray(js.qP)  ? js.qP.map(Number)  : [];
+      const paths = Array.isArray(js.paths) ? js.paths.map(row => row.map(Number)) : [];
+  
+      // Simple sanity check in debug box
+      log({ tLen: t.length, nPaths: paths.length, row0Len: paths[0]?.length });
+  
+      // Update UI
+      drawPaths(t, paths);
+      renderRow(wealthRow, qW);
+      renderRow(pensionRow, qP);
+  
+    } catch (e) {
+      log("Compute error: " + (e?.message || e));
+    }
   }
-}
+
 
   // Event listeners
 
