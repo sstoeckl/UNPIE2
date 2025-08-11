@@ -103,17 +103,13 @@
 
         <div class="kpi">
           <table class="kpiTable" id="kpiTableAdd1">
-            <tr id="add1RowHeader">
-              <th class="label">Percentile:</th>
-              <!-- dynamic p% cells -->
-            </tr>
             <tr id="add1RowWealth">
               <th class="label" id="kWealth">Future value of savings (real):</th>
-              <!-- dynamic FV cells -->
+              <!-- cells inserted by JS -->
             </tr>
             <tr id="add1RowPension">
               <th class="label" id="kPens">Lifelong pension (real):</th>
-              <!-- dynamic Pension cells -->
+              <!-- cells inserted by JS -->
             </tr>
           </table>
         </div>
@@ -211,32 +207,28 @@
     tbl.innerHTML=""; tbl.appendChild(tr);
   }
   
-  function renderKpiTableAdd1(probs, qW, qP) {
-    const hdr = document.getElementById("add1RowHeader");
+function renderKpiTableAdd1(qW, qP) {
     const rowW = document.getElementById("add1RowWealth");
     const rowP = document.getElementById("add1RowPension");
+    // clear old cells (keep the first TH label)
+    rowW.querySelectorAll("td").forEach(td => td.remove());
+    rowP.querySelectorAll("td").forEach(td => td.remove());
   
-    // clear existing dynamic cells (keep first label th)
-    [hdr, rowW, rowP].forEach(tr => tr.querySelectorAll("td").forEach(td => td.remove()));
-  
-    (probs || []).forEach(p => {
-      const td = document.createElement("td");
-      td.textContent = `${Math.round(Number(p)*100)}%`;
-      hdr.appendChild(td);
-    });
+    const round0 = v => Number(Math.round(Number(v))).toLocaleString();
   
     (qW || []).forEach(v => {
       const td = document.createElement("td");
-      td.textContent = Number(v).toLocaleString();
+      td.textContent = round0(v);
       rowW.appendChild(td);
     });
   
     (qP || []).forEach(v => {
       const td = document.createElement("td");
-      td.textContent = Number(v).toLocaleString();
+      td.textContent = round0(v);
       rowP.appendChild(td);
     });
   }
+
 
   // WebR
   import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
@@ -344,8 +336,7 @@
       // 5) Zeichnen & KPIs
       drawPaths(tArr, paths);
       // make sure you extract probs from R as well:
-      const probs = vec(getListElem(results, "probs")) || []; // or wherever you already have it
-      renderKpiTableAdd1(probs, qW, qP);
+      renderKpiTableAdd1(qW, qP);
   
       // Debug
       const dbgObj = { tLen: tArr.length, nPaths: paths.length, rowLen: paths[0]?.length || 0, nrow, ncol, flatLen: flat.length };
