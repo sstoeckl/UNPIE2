@@ -221,7 +221,7 @@
       const s  = +volEl.value;
       const c  = +convEl.value;
   
-      // Ask R to return FLAT paths + dimensions (no asplit, no lists)
+      // Return flat matrix + dims from R (fast & unambiguous)
       const r = await webr.evalR(`
         (function(){
           out <- uadd1(
@@ -230,43 +230,43 @@
           )
           W <- out$results$paths
           list(
-            t     = out$results$t,
-            qW    = out$results$quantiles_wealth,
-            qP    = out$results$quantiles_pension,
-            paths_flat = as.numeric(W),     # flatten row-major
-            n_show     = nrow(W),
-            nper       = ncol(W)
+            t          = out$results$t,
+            qW         = out$results$quantiles_wealth,
+            qP         = out$results$quantiles_pension,
+            paths_flat = as.numeric(W),   # R flattens column-major
+            nrow       = nrow(W),
+            ncol       = ncol(W)
           )
         })()
       `);
   
-      let js = await r.toJs();
-      if (js && js.type) js = unwrap(js);
+      let js = await r.toJs(); if (js && js.type) js = unwrap(js);
   
-      // helpers to normalize vectors (WebR vector or JS array)
-      const vec = x => {
-        if (x == null) return [];
-        if (typeof x === "number") return [x];
-        if (Array.isArray(x)) return x.map(Number);
-        if (x.values && Array.isArray(x.values)) return x.values.map(Number);
-        return [];
-      };
-      const num = x => (typeof x === "number" ? x
-                      : (x && x.values && typeof x.values[0] === "number" ? x.values[0]
-                      : Array.isArray(x) ? Number(x[0]) : NaN));
+      const vec = x =>
+        (x && x.values) ? x.values.map(Number)
+        : Array.isArray(x) ? x.map(Number)
+        : typeof x === "number" ? [x] : [];
   
-      const t        = vec(js.t);
-      const qW       = vec(js.qW);
-      const qP       = vec(js.qP);
-      const flat     = vec(js.paths_flat);
-      const n_show   = num(js.n_show);
-      const nper     = num(js.nper);
+      const num1 = x =>
+        (typeof x === "number") ? x
+        : (x && x.values && typeof x.values[0] === "number") ? x.values[0]
+        : Array.isArray(x) ? Number(x[0]) : NaN;
   
-      // Rebuild paths as Array<Array<number>> in row-major order
+      const t     = vec(js.t);
+      const qW    = vec(js.qW);
+      const qP    = vec(js.qP);
+      const flat  = vec(js.paths_flat);
+      const nrow  = num1(js.nrow);
+      const ncol  = num1(js.ncol);
+  
+      // Rebuild per R's column-major layout
       const paths = [];
-      for (let r = 0; r < n_show; r++) {
-        const start = r * nper;
-        paths.push(flat.slice(start, start + nper));
+      for (let rIdx = 0; rIdx < nrow; rIdx++) {
+        const row = [];
+        for (let cIdx = 0; cIdx < ncol; cIdx++) {
+          row.push(flat[rIdx + cIdx * nrow]);  // <- key fix
+        }
+        paths.push(row);
       }
   
       drawPaths(t, paths);
