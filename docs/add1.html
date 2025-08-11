@@ -221,7 +221,7 @@
       const s  = +volEl.value;
       const c  = +convEl.value;
   
-      // Return flat matrix + dims from R (fast & unambiguous)
+      // Ask R to return clean JSON (arrays only) — no WebR vector/list gymnastics.
       const r = await webr.evalR(`
         (function(){
           out <- uadd1(
@@ -229,55 +229,45 @@
             n_scen=10000, n_show=10, seed=42
           )
           W <- out$results$paths
-          list(
-            t          = out$results$t,
-            qW         = out$results$quantiles_wealth,
-            qP         = out$results$quantiles_pension,
-            paths_flat = as.numeric(W),   # R flattens column-major
-            nrow       = nrow(W),
-            ncol       = ncol(W)
+          payload <- list(
+            t  = as.numeric(out$results$t),
+            qW = as.numeric(out$results$quantiles_wealth),
+            qP = as.numeric(out$results$quantiles_pension),
+            paths = asplit(W, 1L)  # list of row vectors
           )
+          # turn each row to numeric to avoid integer64 surprises
+          payload$paths <- lapply(payload$paths, as.numeric)
+  
+          # serialize to JSON so JS gets plain arrays
+          jsonlite::toJSON(payload, auto_unbox = TRUE)
         })()
       `);
   
-      let js = await r.toJs(); if (js && js.type) js = unwrap(js);
+      // WebR returns an R character vector of length 1 -> unwrap and parse
+      let js = await r.toJs();
+      // If it's a WebR vector object, take the first element; if it's already a string, keep it.
+      const jsonStr =
+        (js && typeof js === "object" && js.values && js.values.length)
+          ? js.values[0]
+          : (Array.isArray(js) ? js[0] : js);
   
-      const vec = x =>
-        (x && x.values) ? x.values.map(Number)
-        : Array.isArray(x) ? x.map(Number)
-        : typeof x === "number" ? [x] : [];
+      const payload = JSON.parse(jsonStr);
   
-      const num1 = x =>
-        (typeof x === "number") ? x
-        : (x && x.values && typeof x.values[0] === "number") ? x.values[0]
-        : Array.isArray(x) ? Number(x[0]) : NaN;
-  
-      const t     = vec(js.t);
-      const qW    = vec(js.qW);
-      const qP    = vec(js.qP);
-      const flat  = vec(js.paths_flat);
-      const nrow  = num1(js.nrow);
-      const ncol  = num1(js.ncol);
-  
-      // Rebuild per R's column-major layout
-      const paths = [];
-      for (let rIdx = 0; rIdx < nrow; rIdx++) {
-        const row = [];
-        for (let cIdx = 0; cIdx < ncol; cIdx++) {
-          row.push(flat[rIdx + cIdx * nrow]);  // <- key fix
-        }
-        paths.push(row);
-      }
+      const t     = payload.t || [];
+      const qW    = payload.qW || [];
+      const qP    = payload.qP || [];
+      const paths = (payload.paths || []).map(row => Array.from(row));
   
       drawPaths(t, paths);
       renderRow(wealthRow, qW);
       renderRow(pensionRow, qP);
   
-      log({ tLen: t.length, nPaths: paths.length, rowLen: paths[0]?.length });
+      log({ tLen: t.length, nPaths: paths.length, rowLen: paths[0]?.length ?? 0 });
     } catch (e) {
       log("Compute error: " + (e?.message || e));
     }
   }
+
 
   // Event listeners
 
