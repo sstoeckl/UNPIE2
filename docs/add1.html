@@ -221,7 +221,7 @@
       const s  = +volEl.value;
       const c  = +convEl.value;
   
-      // 1) R aufrufen – keine Konvertierung in R, einfach die rohen Strukturen zurückgeben
+      // R: nur uadd1() zurückgeben (keine JSON/Extras)
       const r = await webr.evalR(`
         out <- uadd1(
           pmt_real=${p}, nper=${n}, mu_real=${mu}, vol_real=${s}, conv=${c},
@@ -230,75 +230,84 @@
         out
       `);
   
-      // 2) Nach JS heben (ohne eigenes unwrap)
-      const js = await r.toJs();
-      const R  = js && js.values
-        ? js.values[js.names.indexOf('results')]           // list element "results"
-        : js.results;
+      const root = await r.toJs();
   
-      // --- kleine Helfer, die NUR auf .values/.dim prüfen ---
-      const getVec = (obj) => {
-        if (!obj) return [];
-        // WebR vector (double/int/logical) -> has .values
-        if (typeof obj === 'object' && Array.isArray(obj.values)) return obj.values.map(Number);
-        // Plain JS array (fallback)
-        if (Array.isArray(obj)) return obj.map(Number);
-        // Single number
-        if (typeof obj === 'number') return [obj];
+      // --- helper: hole ein Element aus einer R-Liste via Namen robust ---
+      const getListElem = (listObj, name) => {
+        if (!listObj) return undefined;
+        if (listObj[name] !== undefined) return listObj[name];
+        if (Array.isArray(listObj.names) && Array.isArray(listObj.values)) {
+          const k = listObj.names.indexOf(name);
+          if (k >= 0) return listObj.values[k];
+        }
+        return undefined;
+      };
+  
+      // --- helper: WebR-Vektor -> JS array ---
+      const vec = (x) => {
+        if (!x) return [];
+        if (Array.isArray(x)) return x.map(Number);
+        if (typeof x === "object" && Array.isArray(x.values)) return x.values.map(Number);
+        if (typeof x === "number") return [x];
         return [];
       };
   
-      const getDim = (obj) => {
-        if (!obj) return [0,0];
-        // dim ist selbst ein WebR-Integer-Vektor
-        if (obj.dim && obj.dim.values && Array.isArray(obj.dim.values)) {
-          return obj.dim.values.map(Number); // [nrow, ncol]
-        }
-        // manchmal ist dim schon plain array
-        if (obj.dim && Array.isArray(obj.dim)) return obj.dim.map(Number);
-        return [0,0];
-      };
+      // 1) in results rein
+      const results = getListElem(root, "results") || root.results;
   
-      // 3) Einzelteile holen
-      const tObj     = R.values[R.names.indexOf('t')];
-      const qWObj    = R.values[R.names.indexOf('quantiles_wealth')];
-      const qPObj    = R.values[R.names.indexOf('quantiles_pension')];
-      const pathsObj = R.values[R.names.indexOf('paths')];
+      // 2) t, Quantile, paths-Objekt holen
+      const tArr   = vec(getListElem(results, "t"));
+      const qW     = vec(getListElem(results, "quantiles_wealth"));
+      const qP     = vec(getListElem(results, "quantiles_pension"));
+      const pathsO = getListElem(results, "paths");
   
-      const t  = getVec(tObj);
-      const qW = getVec(qWObj);
-      const qP = getVec(qPObj);
+      // 3) flache Werte und (wenn vorhanden) Dimensionen besorgen
+      const flat = vec(pathsO); // flach (length = nrow*ncol)
+      // versuche dim direkt
+      let nrow = 0, ncol = 0;
   
-      // 4) Pfade rekonstruieren (Matrix in column‑major)
-      //    pathsObj ist eine Matrix: { values: [...], dim: [nrow, ncol] }
-      const vals = getVec(pathsObj);        // flache Zahlen
-      const [nrow, ncol] = getDim(pathsObj);
+      // a) dim direkt
+      if (pathsO && pathsO.dim) {
+        const d = vec(pathsO.dim);
+        if (d.length === 2) { nrow = d[0]; ncol = d[1]; }
+      }
+      // b) evtl. in attributes$dim
+      if ((!nrow || !ncol) && pathsO && pathsO.attributes) {
+        const attrs = pathsO.attributes;
+        // attrs kann eine Liste mit names/values sein
+        const dimObj = getListElem(attrs, "dim");
+        const d = vec(dimObj);
+        if (d.length === 2) { nrow = d[0]; ncol = d[1]; }
+      }
+      // c) Fallback: deduziere aus t-Länge und flatLen
+      if ((!nrow || !ncol) && tArr.length > 0 && flat.length % tArr.length === 0) {
+        ncol = tArr.length;
+        nrow = flat.length / ncol;
+      }
   
+      // 4) Pfade in R-Column‑Major rekonstruieren
       const paths = [];
-      if (nrow > 0 && ncol > 0 && vals.length === nrow * ncol) {
+      if (nrow > 0 && ncol > 0 && flat.length === nrow * ncol) {
         for (let rIdx = 0; rIdx < nrow; rIdx++) {
           const row = [];
           for (let cIdx = 0; cIdx < ncol; cIdx++) {
-            row.push( vals[rIdx + cIdx * nrow] );   // column‑major!
+            row.push(flat[rIdx + cIdx * nrow]); // column‑major!
           }
           paths.push(row);
         }
       }
   
-      // 5) Plot & KPIs
-      drawPaths(t, paths);
+      // 5) Zeichnen & KPIs
+      drawPaths(tArr, paths);
       renderRow(wealthRow, qW);
       renderRow(pensionRow, qP);
   
       // Debug
-      const dbgObj = { tLen: t.length, nPaths: paths.length, rowLen: paths[0]?.length || 0, nrow, ncol, flatLen: vals.length };
-      console.log(dbgObj);
-      const dbgEl = document.getElementById('debug');
-      if (dbgEl) dbgEl.textContent = JSON.stringify(dbgObj, null, 2);
+      const dbgObj = { tLen: tArr.length, nPaths: paths.length, rowLen: paths[0]?.length || 0, nrow, ncol, flatLen: flat.length };
+      document.getElementById('debug').textContent = JSON.stringify(dbgObj, null, 2);
   
     } catch (e) {
-      const dbgEl = document.getElementById('debug');
-      if (dbgEl) dbgEl.textContent = "Compute error: " + (e?.message || e);
+      document.getElementById('debug').textContent = "Compute error: " + (e?.message || e);
       console.error(e);
     }
   }
