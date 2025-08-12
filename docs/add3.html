@@ -45,10 +45,7 @@
 <div class="app">
   <div class="wrap">
     <div class="title" id="title">App 13: Maximum periodic spending possible to exceed specified minimum years to ruin with probability p</div>
-    <div class="subtitle">
-      <span id="subtitleText">Maximum admissible (real) yearly spending</span>
-      <span class="badge" id="spendBadge">—</span>
-    </div>
+    <div class="subtitle" id="subtitle">Maximum admissible (real) yearly spending <span class="badge" id="spendBadge">—</span></div>
 
     <div class="grid">
       <!-- Controls -->
@@ -153,28 +150,11 @@
       kYearsHdr:"Zeit seit Beginn der Rentenphase (Jahre):",
       kRuinsHdr:"Anzahl Ruinen nach N Jahren:"}
   };
-  // i18n
-  const I18N = { /* … your existing strings … */ };
-  const T = I18N[lang] || I18N.en_en;
-  
-  // safe setter
-  const setTxt = (id, text) => {
-    const el = document.getElementById(id);
-    if (el) el.textContent = text;
-  };
-  
-  // set simple labels (exist in DOM as plain elements)
-  [
-    "title","gWealth","lWealth","gMinYrs","lMinYrs",
-    "gProb","lProb","gRet","lMu","gVol","lVol",
-    "kYearsHdr","kRuinsHdr"
-  ].forEach(id => setTxt(id, T[id]));
-  
-  // subtitle has a badge next to it → set only the text span
-  setTxt("subtitleText", T.subtitle);
-  
-  document.getElementById("compute").textContent = T.btn;
-  document.getElementById("debugBox").style.display = debug ? "block" : "none";
+  const T=I18N[lang]||I18N.en_en;
+  ["title","subtitle","gWealth","lWealth","gMinYrs","lMinYrs","gProb","lProb","gRet","lMu","gVol","lVol","kYearsHdr","kRuinsHdr"]
+    .forEach(id=>document.getElementById(id).textContent=T[id]);
+  document.getElementById("compute").textContent=T.btn;
+  document.getElementById("debugBox").style.display=debug?"block":"none";
 
   // UI
   const wealthEl=wealth, minyrsEl=minyrs, probEl=prob, muEl=mu, volEl=vol;
