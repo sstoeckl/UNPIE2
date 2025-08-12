@@ -152,7 +152,10 @@
   };
   const T=I18N[lang]||I18N.en_en;
   ["title","subtitle","gWealth","lWealth","gMinYrs","lMinYrs","gProb","lProb","gRet","lMu","gVol","lVol","kYearsHdr","kRuinsHdr"]
-    .forEach(id=>document.getElementById(id).textContent=T[id]);
+    .forEach(id=>{
+      const el = document.getElementById(id);
+      if (el) el.textContent = T[id];
+    });
   document.getElementById("compute").textContent=T.btn;
   document.getElementById("debugBox").style.display=debug?"block":"none";
 
