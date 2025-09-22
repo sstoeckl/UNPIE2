@@ -25,7 +25,7 @@
   button{padding:.55rem .9rem;border:0;border-radius:10px;background:#eee;cursor:pointer}
   .right{padding:10px;display:flex;flex-direction:column;height:100%;overflow:hidden}
   .chartWrap{flex:1 0 auto;height:360px}
-  #bar{width:100%;height:100%}
+  #line{width:100%;height:100%}
   .legend{display:flex;gap:1rem;justify-content:center;margin-top:6px;color:#666;font-size:.92rem;flex:0 0 auto;flex-wrap:wrap}
   .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:.35rem;vertical-align:middle}
   .kpis{display:flex;gap:12px;justify-content:center;margin-top:6px;flex:0 0 auto;flex-wrap:wrap}
@@ -37,7 +37,7 @@
 <body>
 <div class="app">
   <div class="wrap">
-    <div class="title" id="title">App 14n: Fair conversion rate (wealth → lifelong pension)</div>
+    <div class="title" id="title">App 14n: Fair conversion rate (real) from Gompertz–Makeham</div>
     <div class="grid">
       <div class="panel left">
         <div class="group">
@@ -51,12 +51,12 @@
         <div class="group">
           <h3 id="gRates">Rates</h3>
           <div class="row">
-            <label for="rate" style="flex:1" id="lRate">Interest rate</label>
+            <label for="rate" style="flex:1" id="lRate">Interest rate r</label>
             <input id="rate" type="range" min="0" max="0.08" step="0.0005" value="0.03">
             <div class="val" id="rateLabel">3.00%</div>
           </div>
           <div class="row">
-            <label for="infl" style="flex:1" id="lInfl">Inflation rate</label>
+            <label for="infl" style="flex:1" id="lInfl">Inflation i</label>
             <input id="infl" type="range" min="0" max="0.06" step="0.0005" value="0.01">
             <div class="val" id="inflLabel">1.00%</div>
           </div>
@@ -64,12 +64,12 @@
         <div class="group">
           <h3 id="gMort">Mortality (Gompertz–Makeham)</h3>
           <div class="row">
-            <label for="lambda" style="flex:1" id="lLambda">Accidental death rate λ</label>
+            <label for="lambda" style="flex:1" id="lLambda">Accidental λ</label>
             <input id="lambda" type="range" min="0" max="0.02" step="0.0001" value="0">
             <div class="val" id="lambdaLabel">0.0000</div>
           </div>
           <div class="row">
-            <label for="modal" style="flex:1" id="lModal">Modal natural death age m</label>
+            <label for="modal" style="flex:1" id="lModal">Modal age m</label>
             <input id="modal" type="range" min="70" max="95" step="0.1" value="82.3">
             <div class="val" id="modalLabel">82.3</div>
           </div>
@@ -83,14 +83,13 @@
       </div>
 
       <div class="panel right">
-        <div class="chartWrap"><canvas id="bar"></canvas></div>
+        <div class="chartWrap"><canvas id="line"></canvas></div>
         <div class="legend">
-          <span><span class="dot" style="background:#1976d2"></span><span id="legSurv">Survival probability</span></span>
+          <span><span class="dot" style="background:#1976d2"></span>Survival probability</span>
         </div>
         <div class="kpis">
-          <div class="kpi"><strong id="kpiConvLbl">Fair conversion rate:</strong> <span id="convOut">—</span></div>
-          <div class="kpi"><strong id="kpiAnnLbl">Annuity factor:</strong> <span id="annOut">—</span></div>
-          <div class="kpi"><strong id="kpiERLLbl">Expected remaining lifetime:</strong> <span id="erlOut">—</span></div>
+          <div class="kpi"><strong>Fair conversion rate (real):</strong> <span id="convOut">—</span></div>
+          <div class="kpi"><strong>Annuity factor (real):</strong> <span id="annOut">—</span></div>
         </div>
         <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
       </div>
@@ -99,53 +98,36 @@
 </div>
 
 <script type="module">
-  // Params & i18n
+  // URL params
   const params=new URLSearchParams(location.search);
-  const lang =(params.get("lang") || "en_EN").toLowerCase();
   const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
 
-  const I18N={
-    en_en:{title:"App 14n: Fair conversion rate (wealth → lifelong pension)",
-      gAge:"Annuitant age", lAge:"Age (years)",
-      gRates:"Rates", lRate:"Interest rate", lInfl:"Inflation rate", btn:"Compute",
-      gMort:"Mortality (Gompertz–Makeham)", lLambda:"Accidental death rate λ", lModal:"Modal natural death age m", lDisp:"Dispersion b",
-      legSurv:"Survival probability",
-      kpiConvLbl:"Fair conversion rate:", kpiAnnLbl:"Annuity factor:", kpiERLLbl:"Expected remaining lifetime:"},
-    de_de:{title:"App 14n: Faire Umwandlungsrate (Vermögen → lebenslange Rente)",
-      gAge:"Alter der Rentenbezieher:in", lAge:"Alter (Jahre)",
-      gRates:"Sätze", lRate:"Zinssatz", lInfl:"Inflationsrate", btn:"Berechnen",
-      gMort:"Sterblichkeit (Gompertz–Makeham)", lLambda:"Unfallsterblichkeit λ", lModal:"Modales Sterbealter m", lDisp:"Dispersion b",
-      legSurv:"Überlebenswahrscheinlichkeit",
-      kpiConvLbl:"Faire Umwandlungsrate:", kpiAnnLbl:"Rentenbarwertfaktor:", kpiERLLbl:"Erwartete Restlebensdauer:"}
-  };
-  const T=I18N[lang]||I18N.en_en;
-  ["title","gAge","lAge","gRates","lRate","lInfl","gMort","lLambda","lModal","lDisp",
-   "legSurv","kpiConvLbl","kpiAnnLbl","kpiERLLbl"].forEach(id=>document.getElementById(id).textContent=T[id]);
-  document.getElementById("compute").textContent=T.btn;
-  document.getElementById("debugBox").style.display=debug?"block":"none";
-
-  // UI
+  // Elements
   const ageEl=document.getElementById("age"), rateEl=document.getElementById("rate"), inflEl=document.getElementById("infl");
   const lamEl=document.getElementById("lambda"), modalEl=document.getElementById("modal"), dispEl=document.getElementById("disp");
   const ageLbl=document.getElementById("ageLabel"), rateLbl=document.getElementById("rateLabel"), inflLbl=document.getElementById("inflLabel");
   const lamLbl=document.getElementById("lambdaLabel"), modalLbl=document.getElementById("modalLabel"), dispLbl=document.getElementById("dispLabel");
-  const convOut=document.getElementById("convOut"), annOut=document.getElementById("annOut"), erlOut=document.getElementById("erlOut");
-  const dbg=document.getElementById("debug");
+  const convOut=document.getElementById("convOut"), annOut=document.getElementById("annOut");
+  const dbgBox=document.getElementById("debugBox"), dbg=document.getElementById("debug");
+  if(debug) dbgBox.style.display="block";
+
   const fmt=(x,opts={})=>Number(x).toLocaleString(undefined,{maximumFractionDigits:4,...opts});
   const fmtPct=(x)=> (Number(x)*100).toLocaleString(undefined,{maximumFractionDigits:2})+"%";
   const log=x=>{ if(debug) dbg.textContent=typeof x==="string"?x:JSON.stringify(x,null,2); };
-  function refresh(){
+
+  function refreshLabels(){
     ageLbl.textContent=parseInt(ageEl.value,10);
     rateLbl.textContent=(parseFloat(rateEl.value)*100).toFixed(2)+"%";
     inflLbl.textContent=(parseFloat(inflEl.value)*100).toFixed(2)+"%";
     lamLbl.textContent=parseFloat(lamEl.value).toFixed(4);
     modalLbl.textContent=parseFloat(modalEl.value).toFixed(1);
     dispLbl.textContent=parseFloat(dispEl.value).toFixed(1);
-  } refresh();
+  }
+  refreshLabels();
 
-  // Chart (line: survival over age)
-  const ctx=document.getElementById("bar").getContext("2d");
-  const bar=new Chart(ctx,{type:"line",data:{labels:[],datasets:[]},
+  // Chart.js line (survival curve)
+  const ctx=document.getElementById("line").getContext("2d");
+  const line=new Chart(ctx,{type:"line",data:{labels:[],datasets:[]},
     options:{
       responsive:true,maintainAspectRatio:false,
       scales:{
@@ -153,50 +135,65 @@
         y:{beginAtZero:true,max:1,title:{display:true,text:"Survival"},ticks:{callback:v=>v.toFixed(2)}}
       },
       plugins:{legend:{display:false}}
-    }});
+    }
+  });
 
-  function drawChart(ages, surv){
-    bar.data.labels = ages.map(a=>String(Math.round(a)));
-    bar.data.datasets = [{label:"Survival", data:surv, fill:false, tension:0.2}];
-    bar.update();
+  function draw(ages, surv){
+    line.data.labels = ages.map(a=>String(Math.round(a)));
+    line.data.datasets = [{label:"Survival", data:surv, fill:false, tension:0.2}];
+    line.update();
   }
 
   // WebR
   import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
   const webr=new WebR();
-  function unwrap(x){ if(x==null||typeof x!=="object")return x; if(x.type==="list"){const o={};(x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i]));return o;}
-    if(Array.isArray(x.values)) return x.values.length===1?unwrap(x.values[0]):x.values.map(unwrap); return x; }
+  function unwrap(x){
+    if(x==null||typeof x!=="object") return x;
+    if(x.type==="list"){
+      const o={}; (x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i])); return o;
+    }
+    if(Array.isArray(x.values)) return x.values.length===1?unwrap(x.values[0]):x.values.map(unwrap);
+    return x;
+  }
   const num=x=>typeof x==="number"?x:(x&&x.values?x.values[0]:Array.isArray(x)?x[0]:NaN);
   const arr=x=>Array.isArray(x)?x.map(num):(x&&x.values?x.values.map(num):[]);
 
   async function init(){
-    log("Starting WebR…");
     await webr.init();
     const rCode=await (await fetch("./r/ucase14n.R")).text();
     await webr.evalR(rCode);
-    log("WebR ready.");
   }
 
   async function compute(){
     try{
-      refresh();
-      const x=parseInt(ageEl.value,10), r=+rateEl.value, i=+inflEl.value, lam=+lamEl.value, m=+modalEl.value, b=+dispEl.value;
-      const res=await webr.evalR(`ucase14n(x=${x}, lambda=${lam}, m=${m}, b=${b}, r=${r}, inflation=${i})`);
-      let js=await res.toJs(); if(js&&js.type) js=unwrap(js);
-      const R=js.results||{};
-      const ages=arr(R.ages), surv=arr(R.survival);
-      const ann=num(R.annuity_factor), conv=num(R.fair_conversion_rate), erl=num(R.expected_remaining_lifetime);
+      refreshLabels();
+      const x = parseInt(ageEl.value,10);
+      const r = +rateEl.value, i = +inflEl.value;
+      const lam = +lamEl.value, m = +modalEl.value, b = +dispEl.value;
 
-      convOut.textContent = fmtPct(conv);
-      annOut.textContent  = fmt(ann,{maximumFractionDigits:3});
-      erlOut.textContent  = fmt(erl,{maximumFractionDigits:2})+" y";
-      drawChart(ages, surv);
+      const res = await webr.evalR(`ucase14n(x=${x}, lambda=${lam}, m=${m}, b=${b}, r=${r}, inflation=${i})`);
+      let js = await res.toJs(); if(js&&js.type) js=unwrap(js);
+      const R = js.results || {};
+
+      // Required outputs (real-only, original behavior)
+      let fair = num(R.fair_conversion_rate);
+      let ann  = num(R.annuity_factor);
+      if(!isFinite(ann) && isFinite(fair) && fair>0) ann = 1/fair; // safe fallback
+
+      convOut.textContent = isFinite(fair)? fmtPct(fair) : "—";
+      annOut.textContent  = isFinite(ann) ? fmt(ann,{maximumFractionDigits:3}) : "—";
+
+      // Plot
+      const ages = arr(R.ages), surv = arr(R.survival);
+      if(ages.length && surv.length) draw(ages, surv);
+
       log(js);
     }catch(e){ log("Compute error: "+(e?.message||e)); }
   }
 
   document.getElementById("compute").addEventListener("click", compute);
   [ageEl,rateEl,inflEl,lamEl,modalEl,dispEl].forEach(el=>el.addEventListener("input", compute));
+
   await init(); await compute();
 </script>
 </body>

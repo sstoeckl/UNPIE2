@@ -43,7 +43,7 @@ ucase14n <- function(x = 65, lambda = 0, m = 82.3, b = 11.4,
   
   list(
     results = list(
-      annuity_real = annuity_real,
+      annuity_factor = annuity_real,
       fair_conversion_rate = fair_rate,  # single (real) rate, as in original wrapper
       ages = ages,                       # for plotting
       survival = surv                    # for plotting
