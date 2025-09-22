@@ -85,11 +85,11 @@
       <div class="panel right">
         <div class="chartWrap"><canvas id="line"></canvas></div>
         <div class="legend">
-          <span><span class="dot" style="background:#1976d2"></span>Survival probability</span>
+          <span><span class="dot" style="background:#1976d2"></span><span id="legSurv">Survival probability</span></span>
         </div>
         <div class="kpis">
-          <div class="kpi"><strong>Fair conversion rate (real):</strong> <span id="convOut">—</span></div>
-          <div class="kpi"><strong>Annuity factor (real):</strong> <span id="annOut">—</span></div>
+          <div class="kpi"><strong id="kpiConvLbl">Fair conversion rate (real):</strong> <span id="convOut">—</span></div>
+          <div class="kpi"><strong id="kpiAnnLbl">Annuity factor (real):</strong> <span id="annOut">—</span></div>
         </div>
         <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
       </div>
@@ -98,60 +98,90 @@
 </div>
 
 <script type="module">
-  // URL params
+  // --- i18n ---------------------------------------------------------------
   const params=new URLSearchParams(location.search);
-  const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
+  const lang=(params.get("lang")||"en").toLowerCase();
+  const isDE=lang.startsWith("de");
+  const LOCALE=isDE ? "de-DE" : "en-US";
 
-  // Elements
+  const I18N={
+    "en": {
+      title:"App 14n: Fair conversion rate (real) from Gompertz–Makeham",
+      gAge:"Annuitant age", lAge:"Age (years)",
+      gRates:"Rates", lRate:"Interest rate r", lInfl:"Inflation i",
+      gMort:"Mortality (Gompertz–Makeham)", lLambda:"Accidental λ", lModal:"Modal age m", lDisp:"Dispersion b",
+      legSurv:"Survival probability",
+      kpiConvLbl:"Fair conversion rate (real):",
+      kpiAnnLbl:"Annuity factor (real):",
+      btn:"Compute",
+      xAxis:"Age", yAxis:"Survival"
+    },
+    "de": {
+      title:"App 14n: Faire Umwandlungsrate (real) aus Gompertz–Makeham",
+      gAge:"Alter der Rentenbezieher:in", lAge:"Alter (Jahre)",
+      gRates:"Sätze", lRate:"Zinssatz r", lInfl:"Inflation i",
+      gMort:"Sterblichkeit (Gompertz–Makeham)", lLambda:"Unfallsterblichkeit λ", lModal:"Modales Alter m", lDisp:"Dispersion b",
+      legSurv:"Überlebenswahrscheinlichkeit",
+      kpiConvLbl:"Faire Umwandlungsrate (real):",
+      kpiAnnLbl:"Rentenbarwertfaktor (real):",
+      btn:"Berechnen",
+      xAxis:"Alter", yAxis:"Überleben"
+    }
+  };
+  const T = I18N[isDE ? "de" : "en"];
+
+  const setText=(id,txt)=>{ const el=document.getElementById(id); if(el) el.textContent=txt; };
+  ["title","gAge","lAge","gRates","lRate","lInfl","gMort","lLambda","lModal","lDisp","legSurv","kpiConvLbl","kpiAnnLbl"]
+    .forEach(k=>setText(k, T[k]));
+  document.getElementById("compute").textContent=T.btn;
+
+  // --- helpers ------------------------------------------------------------
+  const fmt=(x,opts={})=>Number(x).toLocaleString(LOCALE,{maximumFractionDigits:4,...opts});
+  const fmtPct=(x)=> (Number(x)*100).toLocaleString(LOCALE,{maximumFractionDigits:2}) + "%";
+  const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
+  const dbgBox=document.getElementById("debugBox"), dbg=document.getElementById("debug");
+  if(debug) dbgBox.style.display="block";
+  const log=x=>{ if(debug) dbg.textContent=typeof x==="string"?x:JSON.stringify(x,null,2); };
+
+  // --- UI elements --------------------------------------------------------
   const ageEl=document.getElementById("age"), rateEl=document.getElementById("rate"), inflEl=document.getElementById("infl");
   const lamEl=document.getElementById("lambda"), modalEl=document.getElementById("modal"), dispEl=document.getElementById("disp");
   const ageLbl=document.getElementById("ageLabel"), rateLbl=document.getElementById("rateLabel"), inflLbl=document.getElementById("inflLabel");
   const lamLbl=document.getElementById("lambdaLabel"), modalLbl=document.getElementById("modalLabel"), dispLbl=document.getElementById("dispLabel");
-  const convOut=document.getElementById("convOut"), annOut=document.getElementById("annOut");
-  const dbgBox=document.getElementById("debugBox"), dbg=document.getElementById("debug");
-  if(debug) dbgBox.style.display="block";
-
-  const fmt=(x,opts={})=>Number(x).toLocaleString(undefined,{maximumFractionDigits:4,...opts});
-  const fmtPct=(x)=> (Number(x)*100).toLocaleString(undefined,{maximumFractionDigits:2})+"%";
-  const log=x=>{ if(debug) dbg.textContent=typeof x==="string"?x:JSON.stringify(x,null,2); };
-
   function refreshLabels(){
-    ageLbl.textContent=parseInt(ageEl.value,10);
-    rateLbl.textContent=(parseFloat(rateEl.value)*100).toFixed(2)+"%";
-    inflLbl.textContent=(parseFloat(inflEl.value)*100).toFixed(2)+"%";
-    lamLbl.textContent=parseFloat(lamEl.value).toFixed(4);
-    modalLbl.textContent=parseFloat(modalEl.value).toFixed(1);
-    dispLbl.textContent=parseFloat(dispEl.value).toFixed(1);
+    ageLbl.textContent=parseInt(ageEl.value,10).toLocaleString(LOCALE);
+    rateLbl.textContent=(parseFloat(rateEl.value)*100).toLocaleString(LOCALE,{maximumFractionDigits:2})+"%";
+    inflLbl.textContent=(parseFloat(inflEl.value)*100).toLocaleString(LOCALE,{maximumFractionDigits:2})+"%";
+    lamLbl.textContent=parseFloat(lamEl.value).toLocaleString(LOCALE,{maximumFractionDigits:4});
+    modalLbl.textContent=parseFloat(modalEl.value).toLocaleString(LOCALE,{maximumFractionDigits:1});
+    dispLbl.textContent=parseFloat(dispEl.value).toLocaleString(LOCALE,{maximumFractionDigits:1});
   }
   refreshLabels();
 
-  // Chart.js line (survival curve)
+  // --- Chart --------------------------------------------------------------
   const ctx=document.getElementById("line").getContext("2d");
   const line=new Chart(ctx,{type:"line",data:{labels:[],datasets:[]},
     options:{
       responsive:true,maintainAspectRatio:false,
       scales:{
-        x:{title:{display:true,text:"Age"}},
-        y:{beginAtZero:true,max:1,title:{display:true,text:"Survival"},ticks:{callback:v=>v.toFixed(2)}}
+        x:{title:{display:true,text:T.xAxis}},
+        y:{beginAtZero:true,max:1,title:{display:true,text:T.yAxis},ticks:{callback:v=>v.toFixed(2)}}
       },
       plugins:{legend:{display:false}}
     }
   });
-
   function draw(ages, surv){
     line.data.labels = ages.map(a=>String(Math.round(a)));
-    line.data.datasets = [{label:"Survival", data:surv, fill:false, tension:0.2}];
+    line.data.datasets = [{label:T.legSurv, data:surv, fill:false, tension:0.2}];
     line.update();
   }
 
-  // WebR
+  // --- WebR bridge --------------------------------------------------------
   import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
   const webr=new WebR();
   function unwrap(x){
     if(x==null||typeof x!=="object") return x;
-    if(x.type==="list"){
-      const o={}; (x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i])); return o;
-    }
+    if(x.type==="list"){ const o={}; (x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i])); return o; }
     if(Array.isArray(x.values)) return x.values.length===1?unwrap(x.values[0]):x.values.map(unwrap);
     return x;
   }
@@ -175,15 +205,12 @@
       let js = await res.toJs(); if(js&&js.type) js=unwrap(js);
       const R = js.results || {};
 
-      // Required outputs (real-only, original behavior)
-      let fair = num(R.fair_conversion_rate);
-      let ann  = num(R.annuity_factor);
-      if(!isFinite(ann) && isFinite(fair) && fair>0) ann = 1/fair; // safe fallback
+      const fair = num(R.fair_conversion_rate);
+      const ann  = num(R.annuity_factor);
 
-      convOut.textContent = isFinite(fair)? fmtPct(fair) : "—";
-      annOut.textContent  = isFinite(ann) ? fmt(ann,{maximumFractionDigits:3}) : "—";
+      document.getElementById("convOut").textContent = isFinite(fair)? fmtPct(fair) : "—";
+      document.getElementById("annOut").textContent  = isFinite(ann) ? fmt(ann,{maximumFractionDigits:3}) : "—";
 
-      // Plot
       const ages = arr(R.ages), surv = arr(R.survival);
       if(ages.length && surv.length) draw(ages, surv);
 
