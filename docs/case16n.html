@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>UNPIE2 – Case 16n</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module" src="https://webr.r-wasm.org/latest/webr.mjs"></script>
+<style>
+  html,body{height:100%;margin:0}
+  body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#fff;color:#111}
+  .app{height:740px;display:grid;place-items:stretch}
+  .wrap{max-width:1100px;margin:0 auto;padding:8px 12px;height:100%;box-sizing:border-box}
+  .title{text-align:center;margin:4px 0 8px;font-size:1.15rem}
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:12px;height:calc(100% - 38px)}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{border:1px solid #e8e8e8;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);background:#fff}
+  .left{padding:10px;overflow:auto}
+  .group{border:1px solid #ddd;border-radius:10px;padding:10px;margin-bottom:10px}
+  .group h3{margin:0 0 8px;font-size:1rem}
+  .row{display:flex;align-items:center;gap:.8rem}
+  .row + .row{margin-top:8px}
+  .val{width:7rem;text-align:right;color:#666;font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%}
+  button{padding:.55rem .9rem;border:0;border-radius:10px;background:#eee;cursor:pointer}
+  .right{padding:10px;display:flex;flex-direction:column;height:100%;gap:10px}
+  .chartWrap{flex:1 0 auto;height:360px}
+  #line{width:100%;height:100%}
+  .legend{display:flex;gap:1rem;justify-content:center;margin-top:6px;color:#666;font-size:.92rem;flex-wrap:wrap}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:.35rem;vertical-align:middle}
+  table{width:100%;border-collapse:separate;border-spacing:0 6px}
+  th,td{padding:.55rem .7rem;text-align:right;font-variant-numeric:tabular-nums}
+  th{color:#555;font-weight:600}
+  td:first-child,th:first-child{text-align:left}
+  .pill{display:inline-block;padding:.15rem .45rem;border-radius:999px;color:#fff;font-weight:600;font-size:.85rem}
+  .pill.orange{background:#f29f05}
+  .pill.green{background:#2e7d32}
+  .debug{background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;display:none}
+  pre{margin:0;font-size:.82rem}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="wrap">
+    <div class="title" id="title">App 16n: Moments & conditional survival (Gompertz–Makeham)</div>
+    <div class="grid">
+      <div class="panel left">
+        <div class="group">
+          <h3 id="gY">Remaining lifetime y (years)</h3>
+          <div class="row">
+            <label for="y1" style="flex:1" id="lY1">Scenario 1 (orange)</label>
+            <input id="y1" type="range" min="0" max="30" step="1" value="5">
+            <div class="val" id="y1Label">5</div>
+          </div>
+          <div class="row">
+            <label for="y2" style="flex:1" id="lY2">Scenario 2 (green)</label>
+            <input id="y2" type="range" min="0" max="30" step="1" value="5">
+            <div class="val" id="y2Label">5</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 id="gX">Pension starting age x</h3>
+          <div class="row">
+            <label for="age" style="flex:1" id="lAge">Age x</label>
+            <input id="age" type="range" min="50" max="100" step="1" value="65">
+            <div class="val" id="ageLabel">65</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 id="gLam">Accidental death rate λ</h3>
+          <div class="row">
+            <label for="lam1" style="flex:1" id="lLam1">Scenario 1 (orange)</label>
+            <input id="lam1" type="range" min="0" max="0.02" step="0.0001" value="0">
+            <div class="val" id="lam1Label">0.0000</div>
+          </div>
+          <div class="row">
+            <label for="lam2" style="flex:1" id="lLam2">Scenario 2 (green)</label>
+            <input id="lam2" type="range" min="0" max="0.02" step="0.0001" value="0.003">
+            <div class="val" id="lam2Label">0.0030</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 id="gM">Modal age m</h3>
+          <div class="row">
+            <label for="m1" style="flex:1" id="lM1">Scenario 1 (orange)</label>
+            <input id="m1" type="range" min="70" max="95" step="0.1" value="82.3">
+            <div class="val" id="m1Label">82.3</div>
+          </div>
+          <div class="row">
+            <label for="m2" style="flex:1" id="lM2">Scenario 2 (green)</label>
+            <input id="m2" type="range" min="70" max="95" step="0.1" value="80.9">
+            <div class="val" id="m2Label">80.9</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 id="gB">Dispersion b</h3>
+          <div class="row">
+            <label for="b1" style="flex:1" id="lB1">Scenario 1 (orange)</label>
+            <input id="b1" type="range" min="5" max="20" step="0.1" value="14.5">
+            <div class="val" id="b1Label">14.5</div>
+          </div>
+          <div class="row">
+            <label for="b2" style="flex:1" id="lB2">Scenario 2 (green)</label>
+            <input id="b2" type="range" min="5" max="20" step="0.1" value="11.4">
+            <div class="val" id="b2Label">11.4</div>
+          </div>
+        </div>
+        <button id="compute">Compute</button>
+      </div>
+
+      <div class="panel right">
+        <div class="chartWrap"><canvas id="line"></canvas></div>
+        <div class="legend">
+          <span><span class="dot" style="background:#f29f05"></span><span id="leg1">Scenario 1 density</span></span>
+          <span><span class="dot" style="background:#2e7d32"></span><span id="leg2">Scenario 2 density</span></span>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th id="thSc">Scenario</th>
+              <th id="thExp">Expected remaining lifetime (years)</th>
+              <th id="thMed">Median remaining lifetime (years)</th>
+              <th id="thCond">Conditional probability of surviving another y years</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="pill orange">Scenario 1</span></td>
+              <td id="exp1">—</td>
+              <td id="med1">—</td>
+              <td id="cond1">—</td>
+            </tr>
+            <tr>
+              <td><span class="pill green">Scenario 2</span></td>
+              <td id="exp2">—</td>
+              <td id="med2">—</td>
+              <td id="cond2">—</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // --- i18n ---------------------------------------------------------------
+  const params=new URLSearchParams(location.search);
+  const lang=(params.get("lang")||"en").toLowerCase();
+  const isDE=lang.startsWith("de");
+  const LOCALE=isDE ? "de-DE" : "en-US";
+  const I18N={
+    en:{
+      title:"App 16n: Moments & conditional survival (Gompertz–Makeham)",
+      gY:"Remaining lifetime y (years)", lY1:"Scenario 1 (orange)", lY2:"Scenario 2 (green)",
+      gX:"Pension starting age x", lAge:"Age x",
+      gLam:"Accidental death rate λ", lLam1:"Scenario 1 (orange)", lLam2:"Scenario 2 (green)",
+      gM:"Modal age m", lM1:"Scenario 1 (orange)", lM2:"Scenario 2 (green)",
+      gB:"Dispersion b", lB1:"Scenario 1 (orange)", lB2:"Scenario 2 (green)",
+      btn:"Compute",
+      leg1:"Scenario 1 density", leg2:"Scenario 2 density",
+      thSc:"Scenario", thExp:"Expected remaining lifetime (years)",
+      thMed:"Median remaining lifetime (years)",
+      thCond:"Conditional probability of surviving another y years"
+    },
+    de:{
+      title:"App 16n: Momente & bedingte Überlebenswahrscheinlichkeit (Gompertz–Makeham)",
+      gY:"Restlebensdauer y (Jahre)", lY1:"Szenario 1 (orange)", lY2:"Szenario 2 (grün)",
+      gX:"Renteneintrittsalter x", lAge:"Alter x",
+      gLam:"Unfallsterblichkeit λ", lLam1:"Szenario 1 (orange)", lLam2:"Szenario 2 (grün)",
+      gM:"Modales Alter m", lM1:"Szenario 1 (orange)", lM2:"Szenario 2 (grün)",
+      gB:"Dispersion b", lB1:"Szenario 1 (orange)", lB2:"Szenario 2 (grün)",
+      btn:"Berechnen",
+      leg1:"Dichte Szenario 1", leg2:"Dichte Szenario 2",
+      thSc:"Szenario", thExp:"Erwartete Restlebensdauer (Jahre)",
+      thMed:"Median der Restlebensdauer (Jahre)",
+      thCond:"Bedingte Überlebensw’keit für weitere y Jahre"
+    }
+  };
+  const T=I18N[isDE?"de":"en"];
+  const set=(id,txt)=>{const el=document.getElementById(id); if(el) el.textContent=txt;};
+  set("title",T.title);
+  set("gY",T.gY); set("lY1",T.lY1); set("lY2",T.lY2);
+  set("gX",T.gX); set("lAge",T.lAge);
+  set("gLam",T.gLam); set("lLam1",T.lLam1); set("lLam2",T.lLam2);
+  set("gM",T.gM); set("lM1",T.lM1); set("lM2",T.lM2);
+  set("gB",T.gB); set("lB1",T.lB1); set("lB2",T.lB2);
+  document.getElementById("compute").textContent=T.btn;
+  set("leg1",T.leg1); set("leg2",T.leg2);
+  set("thSc",T.thSc); set("thExp",T.thExp); set("thMed",T.thMed); set("thCond",T.thCond);
+
+  // --- helpers ------------------------------------------------------------
+  const fmt=x=>Number(x).toLocaleString(LOCALE,{maximumFractionDigits:4});
+  const fmtY=x=>Number(x).toLocaleString(LOCALE,{maximumFractionDigits:2})+" y";
+  const fmtPct=x=>(Number(x)*100).toLocaleString(LOCALE,{maximumFractionDigits:2})+"%";
+  const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
+  const dbgBox=document.getElementById("debugBox"), dbg=document.getElementById("debug"); if(debug) dbgBox.style.display="block";
+  const log=v=>{ if(debug) dbg.textContent=typeof v==="string"?v:JSON.stringify(v,null,2); };
+
+  // --- UI elements --------------------------------------------------------
+  const y1=document.getElementById("y1"), y2=document.getElementById("y2");
+  const age=document.getElementById("age");
+  const lam1=document.getElementById("lam1"), lam2=document.getElementById("lam2");
+  const m1=document.getElementById("m1"),   m2=document.getElementById("m2");
+  const b1=document.getElementById("b1"),   b2=document.getElementById("b2");
+
+  const y1L=document.getElementById("y1Label"), y2L=document.getElementById("y2Label");
+  const ageL=document.getElementById("ageLabel");
+  const lam1L=document.getElementById("lam1Label"), lam2L=document.getElementById("lam2Label");
+  const m1L=document.getElementById("m1Label"),     m2L=document.getElementById("m2Label");
+  const b1L=document.getElementById("b1Label"),     b2L=document.getElementById("b2Label");
+
+  function refresh(){
+    y1L.textContent=parseInt(y1.value,10).toLocaleString(LOCALE);
+    y2L.textContent=parseInt(y2.value,10).toLocaleString(LOCALE);
+    ageL.textContent=parseInt(age.value,10).toLocaleString(LOCALE);
+    lam1L.textContent=parseFloat(lam1.value).toLocaleString(LOCALE,{maximumFractionDigits:4});
+    lam2L.textContent=parseFloat(lam2.value).toLocaleString(LOCALE,{maximumFractionDigits:4});
+    m1L.textContent=parseFloat(m1.value).toLocaleString(LOCALE,{maximumFractionDigits:1});
+    m2L.textContent=parseFloat(m2.value).toLocaleString(LOCALE,{maximumFractionDigits:1});
+    b1L.textContent=parseFloat(b1.value).toLocaleString(LOCALE,{maximumFractionDigits:1});
+    b2L.textContent=parseFloat(b2.value).toLocaleString(LOCALE,{maximumFractionDigits:1});
+  }
+  refresh();
+
+  // --- Chart --------------------------------------------------------------
+  const ctx=document.getElementById("line").getContext("2d");
+  const line=new Chart(ctx,{type:"line",data:{labels:[],datasets:[]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      scales:{
+        x:{title:{display:true,text:isDE?"Alter (Jahre)":"Age (years)"}},
+        y:{beginAtZero:true,title:{display:true,text:isDE?"Wahrscheinlichkeit":"Probability"}}
+      },
+      plugins:{legend:{display:true}}
+    }
+  });
+  function draw(ages, d1, d2){
+    line.data.labels = ages.map(a=>String(Math.round(a)));
+    line.data.datasets = [
+      {label:isDE?"Dichte Szenario 1":"Scenario 1 density", data:d1, borderWidth:2, fill:true, backgroundColor:"rgba(242,159,5,0.18)", borderColor:"#f29f05", tension:0.15},
+      {label:isDE?"Dichte Szenario 2":"Scenario 2 density", data:d2, borderWidth:2, fill:true, backgroundColor:"rgba(46,125,50,0.18)", borderColor:"#2e7d32", tension:0.15}
+    ];
+    line.update();
+  }
+
+  // --- WebR bridge --------------------------------------------------------
+  import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
+  const webr=new WebR();
+  function unwrap(x){
+    if(x==null||typeof x!=="object") return x;
+    if(x.type==="list"){ const o={}; (x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i])); return o; }
+    if(Array.isArray(x.values)) return x.values.length===1?unwrap(x.values[0]):x.values.map(unwrap);
+    return x;
+  }
+  const num=x=>typeof x==="number"?x:(x&&x.values?x.values[0]:Array.isArray(x)?x[0]:NaN);
+  const arr=x=>Array.isArray(x)?x.map(num):(x&&x.values?x.values.map(num):[]);
+
+  async function init(){
+    await webr.init();
+    const code = await (await fetch("./r/ucase16n.R")).text();
+    await webr.evalR(code);
+  }
+
+  function fillTable(s1, s2){
+    document.getElementById("exp1").textContent = fmt(s1.expected_remaining_lifetime);
+    document.getElementById("med1").textContent = fmt(s1.median_remaining_lifetime);
+    document.getElementById("cond1").textContent = fmtPct(s1.conditional_probability_survive_y);
+
+    document.getElementById("exp2").textContent = fmt(s2.expected_remaining_lifetime);
+    document.getElementById("med2").textContent = fmt(s2.median_remaining_lifetime);
+    document.getElementById("cond2").textContent = fmtPct(s2.conditional_probability_survive_y);
+
+    // reflect the y used in header tooltips
+    document.getElementById("thCond").title = (isDE?"y = ":"y = ")+
+      [s1.y, s2.y].map(v=>Number(v).toLocaleString(LOCALE)).join(" / ");
+  }
+
+  async function compute(){
+    try{
+      refresh();
+      const expr = `ucase16n(x=${parseInt(age.value,10)}, y1=${parseInt(y1.value,10)}, y2=${parseInt(y2.value,10)}, `+
+                   `lambda1=${+lam1.value}, m1=${+m1.value}, b1=${+b1.value}, `+
+                   `lambda2=${+lam2.value}, m2=${+m2.value}, b2=${+b2.value})`;
+      const res = await webr.evalR(expr);
+      let js = await res.toJs(); if(js && js.type) js = unwrap(js);
+      const R = js.results || {};
+      const S1 = R.scenario1 || {}, S2 = R.scenario2 || {};
+
+      fillTable(S1, S2);
+      const ages = arr(R.ages), d1 = arr(R.density1), d2 = arr(R.density2);
+      if(ages.length && d1.length && d2.length) draw(ages, d1, d2);
+    }catch(e){
+      if(debug) { dbgBox.style.display="block"; dbg.textContent = String(e?.message||e); }
+    }
+  }
+
+  document.getElementById("compute").addEventListener("click", compute);
+  [y1,y2,age,lam1,lam2,m1,m2,b1,b2].forEach(el=>el.addEventListener("input", compute));
+
+  await init(); await compute();
+</script>
+</body>
+</html>
