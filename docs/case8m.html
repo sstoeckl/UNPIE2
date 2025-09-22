@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>UNPIE2 – Case 8m</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module" src="https://webr.r-wasm.org/latest/webr.mjs"></script>
+<style>
+  html,body{height:100%;margin:0}
+  body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#fff;color:#111}
+  .app{height:720px;display:grid;place-items:stretch}
+  .wrap{max-width:1100px;margin:0 auto;padding:8px 12px;height:100%;box-sizing:border-box}
+  .title{text-align:center;margin:4px 0 8px;font-size:1.15rem}
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:12px;height:calc(100% - 38px)}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{border:1px solid #e8e8e8;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);background:#fff}
+  .left{padding:10px;overflow:auto}
+  .group{border:1px solid #ddd;border-radius:10px;padding:10px;margin-bottom:10px}
+  .group h3{margin:0 0 8px;font-size:1rem}
+  .row{display:flex;align-items:center;gap:.8rem}
+  .row + .row{margin-top:8px}
+  .val{width:7rem;text-align:right;color:#666;font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%}
+  button{padding:.55rem .9rem;border:0;border-radius:10px;background:#eee;cursor:pointer}
+  .right{padding:10px;display:flex;flex-direction:column;height:100%;gap:10px}
+  .chartWrap{flex:1 0 auto;height:380px}
+  #bar{width:100%;height:100%}
+  .legend{display:flex;gap:1rem;justify-content:center;margin-top:6px;color:#666;font-size:.92rem;flex-wrap:wrap}
+  .kpis{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .kpi{background:#f7f7f9;border-radius:10px;padding:.55rem .8rem;font-variant-numeric:tabular-nums}
+  .debug{background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;display:none}
+  pre{margin:0;font-size:.82rem}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="wrap">
+    <div class="title" id="title">App 8m: Member’s view — Affordable constant pension payments</div>
+    <div class="grid">
+      <div class="panel left">
+        <div class="group">
+          <h3 id="gWealth">Wealth at retirement</h3>
+          <div class="row">
+            <label for="K" style="flex:1" id="lK">Wealth K</label>
+            <input id="K" type="range" min="0" max="1000000" step="1000" value="200000">
+            <div class="val" id="KLabel">200,000</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 id="gRates">Rates</h3>
+          <div class="row">
+            <label for="rate" style="flex:1" id="lRate">Interest rate r</label>
+            <input id="rate" type="range" min="0" max="0.08" step="0.0005" value="0.03">
+            <div class="val" id="rateLabel">3.00%</div>
+          </div>
+          <div class="row">
+            <label for="infl" style="flex:1" id="lInfl">Inflation rate i</label>
+            <input id="infl" type="range" min="0" max="0.06" step="0.0005" value="0.01">
+            <div class="val" id="inflLabel">1.00%</div>
+          </div>
+          <div class="row">
+            <label for="beta" style="flex:1" id="lBeta">Conversion rate β (nominal)</label>
+            <input id="beta" type="range" min="0.01" max="0.15" step="0.0005" value="0.05">
+            <div class="val" id="betaLabel">0.0500</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 id="gMort">Mortality (Gompertz–Makeham)</h3>
+          <div class="row">
+            <label for="age" style="flex:1" id="lAge">Pension starting age x</label>
+            <input id="age" type="range" min="50" max="100" step="1" value="65">
+            <div class="val" id="ageLabel">65</div>
+          </div>
+          <div class="row">
+            <label for="lambda" style="flex:1" id="lLambda">Accidental death λ</label>
+            <input id="lambda" type="range" min="0" max="0.02" step="0.0001" value="0">
+            <div class="val" id="lambdaLabel">0.0000</div>
+          </div>
+          <div class="row">
+            <label for="modal" style="flex:1" id="lModal">Modal age m</label>
+            <input id="modal" type="range" min="70" max="95" step="0.1" value="82.3">
+            <div class="val" id="modalLabel">82.3</div>
+          </div>
+          <div class="row">
+            <label for="disp" style="flex:1" id="lDisp">Dispersion b</label>
+            <input id="disp" type="range" min="5" max="20" step="0.1" value="11.4">
+            <div class="val" id="dispLabel">11.4</div>
+          </div>
+        </div>
+
+        <button id="compute">Compute</button>
+      </div>
+
+      <div class="panel right">
+        <div class="chartWrap"><canvas id="bar"></canvas></div>
+        <div class="legend">
+          <span style="color:#f29f05">■</span><span id="legNom">Nominal yearly spending (affordable)</span>
+          <span style="color:#6e6e6e">■</span><span id="legReal">Real yearly spending (affordable)</span>
+          <span style="color:#2e7d32">■</span><span id="legBeta">Nominal periodic spending using β</span>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><strong id="kET">Expected remaining lifetime (years):</strong> <span id="etOut">—</span></div>
+          <div class="kpi"><strong id="kFair">Fair conversion rate (real):</strong> <span id="fairOut">—</span></div>
+        </div>
+        <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // --- i18n ---------------------------------------------------------------
+  const params=new URLSearchParams(location.search);
+  const lang=(params.get("lang")||"en").toLowerCase();
+  const isDE=lang.startsWith("de");
+  const LOCALE=isDE ? "de-DE" : "en-US";
+  const I18N={
+    en:{
+      title:"App 8m: Member’s view — Affordable constant pension payments",
+      gWealth:"Wealth at retirement", lK:"Wealth K",
+      gRates:"Rates", lRate:"Interest rate r", lInfl:"Inflation rate i", lBeta:"Conversion rate β (nominal)",
+      gMort:"Mortality (Gompertz–Makeham)", lAge:"Pension starting age x", lLambda:"Accidental death λ", lModal:"Modal age m", lDisp:"Dispersion b",
+      legNom:"Nominal yearly spending (affordable)", legReal:"Real yearly spending (affordable)", legBeta:"Nominal periodic spending using β",
+      kET:"Expected remaining lifetime (years):", kFair:"Fair conversion rate (real):",
+      btn:"Compute"
+    },
+    de:{
+      title:"App 8m: Sicht der Versicherten — Leistbarer konstanter Rentenbetrag",
+      gWealth:"Vermögen zum Rentenbeginn", lK:"Vermögen K",
+      gRates:"Sätze", lRate:"Zinssatz r", lInfl:"Inflation i", lBeta:"Umwandlungssatz β (nominal)",
+      gMort:"Sterblichkeit (Gompertz–Makeham)", lAge:"Renteneintrittsalter x", lLambda:"Unfallsterblichkeit λ", lModal:"Modales Alter m", lDisp:"Dispersion b",
+      legNom:"Leistbarer nominaler Jahresbetrag", legReal:"Leistbarer realer Jahresbetrag", legBeta:"Nominal periodischer Betrag via β",
+      kET:"Erwartete Restlebensdauer (Jahre):", kFair:"Fairer Umwandlungssatz (real):",
+      btn:"Berechnen"
+    }
+  };
+  const T=I18N[isDE?"de":"en"];
+  const set=(id,txt)=>{const el=document.getElementById(id); if(el) el.textContent=txt;};
+  set("title",T.title); set("gWealth",T.gWealth); set("lK",T.lK);
+  set("gRates",T.gRates); set("lRate",T.lRate); set("lInfl",T.lInfl); set("lBeta",T.lBeta);
+  set("gMort",T.gMort); set("lAge",T.lAge); set("lLambda",T.lLambda); set("lModal",T.lModal); set("lDisp",T.lDisp);
+  set("legNom",T.legNom); set("legReal",T.legReal); set("legBeta",T.legBeta);
+  set("kET",T.kET); set("kFair",T.kFair);
+  document.getElementById("compute").textContent=T.btn;
+
+  // --- helpers ------------------------------------------------------------
+  const fmt=x=>Number(x).toLocaleString(LOCALE,{maximumFractionDigits:2});
+  const fmtPct=x=>(Number(x)*100).toLocaleString(LOCALE,{maximumFractionDigits:2})+"%";
+  const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
+  const dbg=document.getElementById("debug"), dbgBox=document.getElementById("debugBox"); if(debug) dbgBox.style.display="block";
+  const log=v=>{ if(debug) dbg.textContent=typeof v==="string"?v:JSON.stringify(v,null,2); };
+
+  // --- UI elements --------------------------------------------------------
+  const K=document.getElementById("K"), rate=document.getElementById("rate"), infl=document.getElementById("infl"), beta=document.getElementById("beta");
+  const age=document.getElementById("age"), lambda=document.getElementById("lambda"), modal=document.getElementById("modal"), disp=document.getElementById("disp");
+  const KL=document.getElementById("KLabel"), rateL=document.getElementById("rateLabel"), inflL=document.getElementById("inflLabel"), betaL=document.getElementById("betaLabel");
+  const ageL=document.getElementById("ageLabel"), lambdaL=document.getElementById("lambdaLabel"), modalL=document.getElementById("modalLabel"), dispL=document.getElementById("dispLabel");
+
+  function refresh(){
+    KL.textContent=parseFloat(K.value).toLocaleString(LOCALE,{maximumFractionDigits:0});
+    rateL.textContent=(parseFloat(rate.value)*100).toLocaleString(LOCALE,{maximumFractionDigits:2})+"%";
+    inflL.textContent=(parseFloat(infl.value)*100).toLocaleString(LOCALE,{maximumFractionDigits:2})+"%";
+    betaL.textContent=parseFloat(beta.value).toLocaleString(LOCALE,{maximumFractionDigits:4});
+    ageL.textContent=parseInt(age.value,10).toLocaleString(LOCALE);
+    lambdaL.textContent=parseFloat(lambda.value).toLocaleString(LOCALE,{maximumFractionDigits:4});
+    modalL.textContent=parseFloat(modal.value).toLocaleString(LOCALE,{maximumFractionDigits:1});
+    dispL.textContent=parseFloat(disp.value).toLocaleString(LOCALE,{maximumFractionDigits:1});
+  }
+  refresh();
+
+  // --- Chart --------------------------------------------------------------
+  const ctx=document.getElementById("bar").getContext("2d");
+  const bar=new Chart(ctx,{type:"bar",data:{labels:[""],datasets:[]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      scales:{ x:{stacked:false}, y:{beginAtZero:true} },
+      plugins:{legend:{display:true}}
+    }
+  });
+  function draw(vals){
+    bar.data.labels=[""];
+    bar.data.datasets=[
+      {label:T.legNom, data:[vals.nom], backgroundColor:"#f29f05"},
+      {label:T.legReal, data:[vals.real], backgroundColor:"#6e6e6e"},
+      {label:T.legBeta, data:[vals.beta], backgroundColor:"#2e7d32"},
+    ];
+    bar.update();
+  }
+
+  // --- WebR bridge --------------------------------------------------------
+  import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
+  const webr=new WebR();
+  function unwrap(x){
+    if(x==null||typeof x!=="object") return x;
+    if(x.type==="list"){ const o={}; (x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i])); return o; }
+    if(Array.isArray(x.values)) return x.values.length===1?unwrap(x.values[0]):x.values.map(unwrap);
+    return x;
+  }
+  const num=x=>typeof x==="number"?x:(x&&x.values?x.values[0]:Array.isArray(x)?x[0]:NaN);
+
+  async function init(){
+    await webr.init();
+    const r=await (await fetch("./r/ucase8m.R")).text();
+    await webr.evalR(r);
+  }
+
+  async function compute(){
+    try{
+      refresh();
+      const expr = `ucase8m(K=${+K.value}, r=${+rate.value}, inflation=${+infl.value}, beta=${+beta.value}, x=${parseInt(age.value,10)}, lambda=${+lambda.value}, m=${+modal.value}, b=${+disp.value})`;
+      const res = await webr.evalR(expr);
+      let js = await res.toJs(); if(js&&js.type) js = unwrap(js);
+      const R = js.results || {};
+
+      const nom  = num(R.spend_nominal_yearly);
+      const real = num(R.spend_real_yearly);
+      const betv = num(R.spend_via_beta);
+      draw({nom, real, beta:betv});
+
+      document.getElementById("etOut").textContent   = fmt(num(R.expected_remaining_lifetime));
+      document.getElementById("fairOut").textContent = fmtPct(num(R.fair_conversion_rate));
+
+      log(js);
+    }catch(e){ log("Compute error: "+(e?.message||e)); }
+  }
+
+  document.getElementById("compute").addEventListener("click", compute);
+  [K,rate,infl,beta,age,lambda,modal,disp].forEach(el=>el.addEventListener("input", compute));
+
+  await init(); await compute();
+</script>
+</body>
+</html>
