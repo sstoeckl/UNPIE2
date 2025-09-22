@@ -1,54 +1,52 @@
-# Case 14n: Fair conversion rate (wealth -> lifelong pension)
-# Implements a Gompertz–Makeham survival with parameters:
-#   lambda = accidental death rate (Makeham term)
-#   m      = modal natural death age
-#   b      = dispersion
-# Discounts with the *real* rate: (1+r)/(1+inflation) - 1
-# Outputs: survival curve, annuity factor, fair conversion rate, expected remaining lifetime.
+# Case 14n (original behavior): "Fair" conversion rate with constant expected returns
+# Real discounting only (single output rate), survival returned for plotting.
+#
+# Survival (Gompertz–Makeham, modal m, dispersion b):
+#   S(t | x) = exp( - [ λ t + exp((x - m)/b) * (exp(t/b) - 1) ] )
+# Continuous real discount rate:
+#   δ_real = ln(1 + r) - ln(1 + inflation)
+# Continuous-life annuity (rate 1 per year):
+#   ā_x(δ) = ∫_0^∞ e^{-δ t} S(t|x) dt
+# Fair conversion rate:
+#   β_fair = 1 / ā_x(δ_real)
 
-ucase14n <- function(x = 65, lambda = 0, m = 82.3, b = 11.4, r = 0.03, inflation = 0.01) {
-  # real discount rate and factor
-  real_r <- (1 + r) / (1 + inflation) - 1
-  v <- 1 / (1 + real_r)
+ucase14n <- function(x = 65, lambda = 0, m = 82.3, b = 11.4,
+                     r = 0.03, inflation = 0.01,
+                     chart_max_age = 120) {
   
-  # horizon up to max_age
-  max_age <- 120
+  # Real continuous discount rate
+  delta_real <- log1p(r) - log1p(inflation)  # ln(1+r) - ln(1+i)
+  
+  # Survival function S(t | x) under Gompertz–Makeham
+  S <- function(t) {
+    # cumulative hazard over [0, t]:
+    #   Λ(t) = λ t + exp((x - m)/b) * (exp(t/b) - 1)
+    cum_haz <- lambda * t + exp((x - m)/b) * (exp(t / b) - 1)
+    exp(-cum_haz)
+  }
+  
+  # Continuous-life annuity at real rate via numeric integration
+  annuity_real <- (function(delta) {
+    f <- function(t) exp(-delta * t) * S(t)
+    # Upper bound large enough for numerical convergence
+    stats::integrate(f, lower = 0, upper = 200, rel.tol = 1e-10, abs.tol = 0)$value
+  })(delta_real)
+  
+  fair_rate <- if (is.finite(annuity_real) && annuity_real > 0) 1 / annuity_real else NA_real_
+  
+  # Data for the plot (survival vs. age)
+  max_age <- max(x, chart_max_age)
   T <- max(0, floor(max_age - x))
-  t <- seq(0, T, by = 1)
-  
-  # Gompertz–Makeham survival from age x to x+t:
-  # hazard(u) = lambda + exp((x+u - m)/b)
-  # cumulative hazard over [0,t]:
-  #   Lambda(t) = lambda * t + exp((x - m)/b) * b * (exp(t/b) - 1)
-  # survival S(t) = exp(-Lambda(t))
-  surv <- exp(- (lambda * t + exp((x - m)/b) * b * (exp(t / b) - 1)))
-  
-  # Discrete immediate annuity: payments at t=1,2,... with probability of survival to t years
-  if (T >= 1) {
-    annuity_factor <- sum(v^(1:T) * surv[2:(T + 1)])  # surv at 1..T
-  } else {
-    annuity_factor <- 0
-  }
-  
-  fair_conversion_rate <- ifelse(annuity_factor > 0, 1 / annuity_factor, NA_real_)
-  
-  # Expected remaining lifetime (approx, in years): sum of S(t) over t=0..T-1 with step 1
-  # (discrete approximation of integral of survival)
-  if (T >= 1) {
-    erl <- sum(surv[1:T])
-  } else {
-    erl <- 0
-  }
-  
-  ages <- x + t
+  t_seq <- seq(0, T, by = 1)
+  ages  <- x + t_seq
+  surv  <- S(t_seq)
   
   list(
     results = list(
-      ages = ages,
-      survival = surv,
-      annuity_factor = annuity_factor,
-      fair_conversion_rate = fair_conversion_rate,
-      expected_remaining_lifetime = erl
+      annuity_real = annuity_real,
+      fair_conversion_rate = fair_rate,  # single (real) rate, as in original wrapper
+      ages = ages,                       # for plotting
+      survival = surv                    # for plotting
     )
   )
 }
