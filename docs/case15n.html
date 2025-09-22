@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>UNPIE2 – Case 15n</title>
+<script type="module" src="https://webr.r-wasm.org/latest/webr.mjs"></script>
+<style>
+  html,body{height:100%;margin:0}
+  body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#fff;color:#111}
+  .app{height:640px;display:grid;place-items:stretch}
+  .wrap{max-width:900px;margin:0 auto;padding:8px 12px;height:100%;box-sizing:border-box}
+  .title{text-align:center;margin:4px 0 8px;font-size:1.15rem}
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:12px;height:calc(100% - 38px)}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{border:1px solid #e8e8e8;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);background:#fff}
+  .left{padding:10px;overflow:auto}
+  .group{border:1px solid #ddd;border-radius:10px;padding:10px;margin-bottom:10px}
+  .group h3{margin:0 0 8px;font-size:1rem}
+  .row{display:flex;align-items:center;gap:.8rem}
+  .row + .row{margin-top:8px}
+  .val{width:7rem;text-align:right;color:#666;font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%}
+  button{padding:.55rem .9rem;border:0;border-radius:10px;background:#eee;cursor:pointer}
+  .right{padding:10px;display:flex;flex-direction:column;gap:10px}
+  .kpis{display:flex;flex-direction:column;gap:8px}
+  .kpi{background:#f7f7f9;border-radius:10px;padding:.6rem .8rem;font-variant-numeric:tabular-nums}
+  .debug{background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;display:none}
+  pre{margin:0;font-size:.82rem}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="wrap">
+    <div class="title" id="title">App 15n: Probability of retirement ruin (approx.)</div>
+    <div class="grid">
+      <div class="panel left">
+        <div class="group">
+          <h3 id="gRet">Retirement & returns</h3>
+          <div class="row">
+            <label for="age" style="flex:1" id="lAge">Age x</label>
+            <input id="age" type="range" min="50" max="100" step="1" value="65">
+            <div class="val" id="ageLabel">65</div>
+          </div>
+          <div class="row">
+            <label for="rate" style="flex:1" id="lRate">Expected real return r</label>
+            <input id="rate" type="range" min="0" max="0.2" step="0.0005" value="0.03">
+            <div class="val" id="rateLabel">3.00%</div>
+          </div>
+          <div class="row">
+            <label for="sigma" style="flex:1" id="lSigma">Volatility σ (real)</label>
+            <input id="sigma" type="range" min="0" max="0.4" step="0.001" value="0.08">
+            <div class="val" id="sigmaLabel">0.0800</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 id="gFin">Finances (real)</h3>
+          <div class="row">
+            <label for="B" style="flex:1" id="lB">Spending B / year</label>
+            <input id="B" type="range" min="0" max="1000" step="1" value="100">
+            <div class="val" id="BLabel">100</div>
+          </div>
+          <div class="row">
+            <label for="K" style="flex:1" id="lK">Wealth K at retirement</label>
+            <input id="K" type="range" min="100" max="10000" step="10" value="1000">
+            <div class="val" id="KLabel">1,000</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 id="gMort">Mortality (Gompertz–Makeham)</h3>
+          <div class="row">
+            <label for="lambda" style="flex:1" id="lLambda">Accidental λ</label>
+            <input id="lambda" type="range" min="0" max="0.02" step="0.0001" value="0">
+            <div class="val" id="lambdaLabel">0.0000</div>
+          </div>
+          <div class="row">
+            <label for="m" style="flex:1" id="lM">Modal age m</label>
+            <input id="m" type="range" min="70" max="95" step="0.1" value="82.3">
+            <div class="val" id="mLabel">82.3</div>
+          </div>
+          <div class="row">
+            <label for="b" style="flex:1" id="lB2">Dispersion b</label>
+            <input id="b" type="range" min="5" max="20" step="0.1" value="11.4">
+            <div class="val" id="bLabel">11.4</div>
+          </div>
+        </div>
+        <button id="compute">Compute</button>
+      </div>
+
+      <div class="panel right">
+        <div class="kpis">
+          <div class="kpi"><strong id="kRuin">Probability of retirement ruin:</strong> <span id="ruinOut">—</span></div>
+          <div class="kpi"><strong id="kMort">Mortality rate (λ<sup>exp</sup>):</strong> <span id="mortOut">—</span></div>
+        </div>
+        <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // --- i18n ---------------------------------------------------------------
+  const params=new URLSearchParams(location.search);
+  const lang=(params.get("lang")||"en").toLowerCase();
+  const isDE=lang.startsWith("de");
+  const LOCALE=isDE ? "de-DE" : "en-US";
+  const I18N={
+    en:{
+      title:"App 15n: Probability of retirement ruin (approx.)",
+      gRet:"Retirement & returns", lAge:"Age x", lRate:"Expected real return r", lSigma:"Volatility σ (real)",
+      gFin:"Finances (real)", lB:"Spending B / year", lK:"Wealth K at retirement",
+      gMort:"Mortality (Gompertz–Makeham)", lLambda:"Accidental λ", lM:"Modal age m", lB2:"Dispersion b",
+      btn:"Compute",
+      kRuin:"Probability of retirement ruin:",
+      kMort:"Mortality rate (λ^exp):"
+    },
+    de:{
+      title:"App 15n: Wahrscheinlichkeit des Ruhestandsruins (Approx.)",
+      gRet:"Ruhestand & Renditen", lAge:"Alter x", lRate:"Erwartete Realrendite r", lSigma:"Volatilität σ (real)",
+      gFin:"Finanzen (real)", lB:"Ausgaben B / Jahr", lK:"Vermögen K zum Rentenbeginn",
+      gMort:"Sterblichkeit (Gompertz–Makeham)", lLambda:"Unfallsterblichkeit λ", lM:"Modales Alter m", lB2:"Dispersion b",
+      btn:"Berechnen",
+      kRuin:"Wahrscheinlichkeit des Ruhestandsruins:",
+      kMort:"Sterblichkeitsrate (λ^exp):"
+    }
+  };
+  const T=I18N[isDE?"de":"en"];
+  const set=(id,txt)=>{const el=document.getElementById(id); if(el) el.textContent=txt;};
+  set("title",T.title); set("gRet",T.gRet); set("lAge",T.lAge); set("lRate",T.lRate); set("lSigma",T.lSigma);
+  set("gFin",T.gFin); set("lB",T.lB); set("lK",T.lK);
+  set("gMort",T.gMort); set("lLambda",T.lLambda); set("lM",T.lM); set("lB2",T.lB2);
+  document.getElementById("compute").textContent=T.btn;
+  document.getElementById("kRuin").textContent=T.kRuin;
+  document.getElementById("kMort").innerHTML=T.kMort.replace("^exp","<sup>exp</sup>");
+
+  // --- helpers ------------------------------------------------------------
+  const fmtPct=x=>(Number(x)*100).toLocaleString(LOCALE,{maximumFractionDigits:2})+"%";
+  const fmt=x=>Number(x).toLocaleString(LOCALE,{maximumFractionDigits:4});
+  const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
+  const dbgBox=document.getElementById("debugBox"), dbg=document.getElementById("debug"); if(debug) dbgBox.style.display="block";
+  const log=v=>{ if(debug) dbg.textContent=typeof v==="string"?v:JSON.stringify(v,null,2); };
+
+  // --- UI elements --------------------------------------------------------
+  const age=document.getElementById("age"), rate=document.getElementById("rate"), sigma=document.getElementById("sigma");
+  const B=document.getElementById("B"), K=document.getElementById("K");
+  const lam=document.getElementById("lambda"), m=document.getElementById("m"), b=document.getElementById("b");
+  const ageL=document.getElementById("ageLabel"), rateL=document.getElementById("rateLabel"), sigmaL=document.getElementById("sigmaLabel");
+  const BL=document.getElementById("BLabel"), KL=document.getElementById("KLabel");
+  const lamL=document.getElementById("lambdaLabel"), mL=document.getElementById("mLabel"), bL=document.getElementById("bLabel");
+
+  function refresh(){
+    ageL.textContent=parseInt(age.value,10).toLocaleString(LOCALE);
+    rateL.textContent=(parseFloat(rate.value)*100).toLocaleString(LOCALE,{maximumFractionDigits:2})+"%";
+    sigmaL.textContent=parseFloat(sigma.value).toLocaleString(LOCALE,{maximumFractionDigits:4});
+    BL.textContent=parseFloat(B.value).toLocaleString(LOCALE,{maximumFractionDigits:0});
+    KL.textContent=parseFloat(K.value).toLocaleString(LOCALE,{maximumFractionDigits:0});
+    lamL.textContent=parseFloat(lam.value).toLocaleString(LOCALE,{maximumFractionDigits:4});
+    mL.textContent=parseFloat(m.value).toLocaleString(LOCALE,{maximumFractionDigits:1});
+    bL.textContent=parseFloat(b.value).toLocaleString(LOCALE,{maximumFractionDigits:1});
+  }
+  refresh();
+
+  // --- WebR bridge --------------------------------------------------------
+  import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
+  const webr=new WebR();
+  function unwrap(x){
+    if(x==null||typeof x!=="object") return x;
+    if(x.type==="list"){ const o={}; (x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i])); return o; }
+    if(Array.isArray(x.values)) return x.values.length===1?unwrap(x.values[0]):x.values.map(unwrap);
+    return x;
+  }
+  const num=x=>typeof x==="number"?x:(x&&x.values?x.values[0]:Array.isArray(x)?x[0]:NaN);
+
+  async function init(){
+    await webr.init();
+    const code = await (await fetch("./r/ucase15n.R")).text();
+    await webr.evalR(code);
+  }
+
+  async function compute(){
+    try{
+      refresh();
+      const expr = `ucase15n(x=${parseInt(age.value,10)}, lambda=${+lam.value}, m=${+m.value}, b=${+b.value}, r=${+rate.value}, sigma=${+sigma.value}, inflation=0, B=${+B.value}, K=${+K.value})`;
+      const res = await webr.evalR(expr);
+      let js = await res.toJs(); if(js&&js.type) js=unwrap(js);
+      const R = js.results || {};
+
+      const mort = num(R.mortality_rate);
+      const ruin = num(R.probability_of_retirement_ruin_when_starting_at_wealth_w);
+
+      document.getElementById("mortOut").textContent = isFinite(mort)? fmt(mort) : "—";
+      document.getElementById("ruinOut").textContent = isFinite(ruin)? fmtPct(ruin) : "—";
+
+      log(js);
+    }catch(e){ log("Compute error: "+(e?.message||e)); }
+  }
+
+  document.getElementById("compute").addEventListener("click", compute);
+  [age,rate,sigma,B,K,lam,m,b].forEach(el=>el.addEventListener("input", compute));
+
+  await init(); await compute();
+</script>
+</body>
+</html>
