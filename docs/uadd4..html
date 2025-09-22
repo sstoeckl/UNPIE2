@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>UNPIE2 – App 11</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module" src="https://webr.r-wasm.org/latest/webr.mjs"></script>
+
+<style>
+  html,body{height:100%;margin:0}
+  body{overflow:hidden;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#fff;color:#111}
+  .app{height:640px;display:grid;place-items:stretch}
+  .wrap{max-width:1150px;margin:0 auto;padding:8px 12px;height:100%;box-sizing:border-box}
+  .title{text-align:center;margin:4px 0 6px;font-size:1.15rem}
+  .subtitle{text-align:center;margin-bottom:6px;color:#666}
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:12px;height:calc(100% - 52px)}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{border:1px solid #e8e8e8;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);background:#fff}
+  .left{padding:10px;overflow:auto}
+  .group{border:1px solid #ddd;border-radius:10px;padding:10px;margin-bottom:10px}
+  .group h3{margin:0 0 8px;font-size:1rem}
+  .row{display:flex;align-items:center;gap:.8rem}
+  .row + .row{margin-top:8px}
+  .val{width:7rem;text-align:right;color:#666;font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%}
+  button{padding:.55rem .9rem;border:0;border-radius:10px;background:#eee;cursor:pointer}
+  .right{padding:10px;display:flex;flex-direction:column;height:100%;overflow:hidden}
+  .badge{display:inline-block;background:#f7f7f9;border-radius:10px;padding:.45rem .7rem;margin-left:.5rem;font-variant-numeric:tabular-nums}
+  .chartWrap{flex:1 0 auto;height:360px}
+  #line{width:100%;height:100%}
+  .kpi{margin-top:6px;text-align:center}
+  .kpiTable { border-collapse: separate; border-spacing: 6px; margin: 0 auto; }
+  .kpiTable th, .kpiTable td {
+    background:#f7f7f9; padding:.45rem .6rem; border-radius:8px;
+    font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap;
+  }
+  .kpiTable th.label { background:#ebedf0; color:#333; text-align:left; }
+  .debug{margin-top:6px;background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;flex:0 0 110px;display:none}
+  pre{margin:0;font-size:.82rem}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="wrap">
+    <div class="title" id="title">App 11: Probability to exceed minimum years to ruin with given yearly (real) spending</div>
+    <div class="subtitle"><span id="subtitleText">Probability (survive ≥ N years)</span><span class="badge" id="probBadge">—</span></div>
+
+    <div class="grid">
+      <div class="panel left">
+        <div class="group">
+          <h3 id="gWealth">Wealth at retirement</h3>
+          <div class="row">
+            <label for="wealth" style="flex:1" id="lWealth">Wealth</label>
+            <input id="wealth" type="range" min="20000" max="1000000" step="1000" value="235000">
+            <div class="val" id="wealthLabel">235,000</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 id="gSpend">Yearly spending (real)</h3>
+          <div class="row">
+            <label for="spend" style="flex:1" id="lSpend">Spending per year</label>
+            <input id="spend" type="range" min="1000" max="40000" step="100" value="12000">
+            <div class="val" id="spendLabel">12,000</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 id="gMinYrs">Minimum years to ruin</h3>
+          <div class="row">
+            <label for="minyrs" style="flex:1" id="lMinYrs">Years</label>
+            <input id="minyrs" type="range" min="5" max="30" step="1" value="20">
+            <div class="val" id="minyrsLabel">20</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 id="gRet">Expected (real) return</h3>
+          <div class="row">
+            <label for="mu" style="flex:1" id="lMu">Expected return</label>
+            <input id="mu" type="range" min="0" max="0.10" step="0.0005" value="0.03">
+            <div class="val" id="muLabel">3.00%</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 id="gVol">Volatility of expected (real) return</h3>
+          <div class="row">
+            <label for="vol" style="flex:1" id="lVol">Volatility</label>
+            <input id="vol" type="range" min="0" max="0.30" step="0.0005" value="0.08">
+            <div class="val" id="volLabel">8.00%</div>
+          </div>
+        </div>
+
+        <button id="compute">Recalculate</button>
+      </div>
+
+      <div class="panel right">
+        <div class="chartWrap"><canvas id="line"></canvas></div>
+        <div class="kpi">
+          <table class="kpiTable" id="kpiTableAdd4">
+            <tr id="add4RowHeader">
+              <th class="label" id="kYearsHdr">Time since entering retirement phase (years):</th>
+            </tr>
+            <tr id="add4RowCounts">
+              <th class="label" id="kRuinsHdr">Number of ruins after N years:</th>
+            </tr>
+          </table>
+        </div>
+        <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // URL params
+  const params=new URLSearchParams(location.search);
+  const lang =(params.get("lang") || "en_EN").toLowerCase();
+  const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
+  const seedQS=params.get("seed");
+  const seedVal=seedQS?parseInt(seedQS,10):null;
+
+  const I18N={
+    en_en:{title:"App 11: Probability to exceed minimum years to ruin with given yearly (real) spending",
+      subtitle:"Probability (survive ≥ N years)",
+      gWealth:"Wealth at retirement", lWealth:"Wealth",
+      gSpend:"Yearly spending (real)", lSpend:"Spending per year",
+      gMinYrs:"Minimum years to ruin", lMinYrs:"Years",
+      gRet:"Expected (real) return", lMu:"Expected return",
+      gVol:"Volatility of expected (real) return", lVol:"Volatility",
+      btn:"Recalculate",
+      kYearsHdr:"Time since entering retirement phase (years):",
+      kRuinsHdr:"Number of ruins after N years:"},
+    de_de:{title:"App 11: Wahrscheinlichkeit, die Mindestjahre bis zur Zahlungsunfähigkeit mit gegebener (realer) Jahresausgabe zu überschreiten",
+      subtitle:"Wahrscheinlichkeit (Überleben ≥ N Jahre)",
+      gWealth:"Vermögen bei Pensionseintritt", lWealth:"Vermögen",
+      gSpend:"Jährliche Ausgaben (real)", lSpend:"Ausgaben pro Jahr",
+      gMinYrs:"Mindestjahre bis zur Zahlungsunfähigkeit", lMinYrs:"Jahre",
+      gRet:"Erwartete (reale) Rendite", lMu:"Erwartete Rendite",
+      gVol:"Volatilität der erwarteten (realen) Rendite", lVol:"Volatilität",
+      btn:"Neu berechnen",
+      kYearsHdr:"Zeit seit Beginn der Rentenphase (Jahre):",
+      kRuinsHdr:"Anzahl Ruinen nach N Jahren:"}
+  };
+  const T=I18N[lang]||I18N.en_en;
+
+  const ids=["title","gWealth","lWealth","gSpend","lSpend","gMinYrs","lMinYrs","gRet","lMu","gVol","lVol","kYearsHdr","kRuinsHdr"];
+  ids.forEach(id=>{const el=document.getElementById(id); if(el) el.textContent=T[id];});
+  const subt=document.getElementById("subtitleText"); if(subt) subt.textContent=T.subtitle;
+  const btn=document.getElementById("compute"); if(btn) btn.textContent=T.btn;
+  const debugBox=document.getElementById("debugBox"); if(debugBox) debugBox.style.display=debug?"block":"none";
+
+  const $=id=>document.getElementById(id);
+  const wealthEl=$("wealth"), spendEl=$("spend"), minyrsEl=$("minyrs"), muEl=$("mu"), volEl=$("vol");
+  const wealthLbl=$("wealthLabel"), spendLbl=$("spendLabel"), minyrsLbl=$("minyrsLabel"), muLbl=$("muLabel"), volLbl=$("volLabel");
+  const probBadge=$("probBadge"), dbg=$("debug");
+
+  const fmt=(x,opts={})=>Number(x).toLocaleString(undefined,{maximumFractionDigits:0,...opts});
+  const pct=(x,dec=2)=>(parseFloat(x)*100).toFixed(dec)+"%";
+  const log=x=>{ if(debug) dbg.textContent=typeof x==="string"?x:JSON.stringify(x,null,2); };
+
+  function refresh(){
+    wealthLbl.textContent=fmt(wealthEl.value,{maximumFractionDigits:0});
+    spendLbl.textContent=fmt(spendEl.value,{maximumFractionDigits:0});
+    minyrsLbl.textContent=parseInt(minyrsEl.value,10);
+    muLbl.textContent=pct(muEl.value);
+    volLbl.textContent=pct(volEl.value);
+  } refresh();
+
+  // Chart
+  const COLORS=["#000","#9e9e9e","#1976d2","#ff9800","#7b1fa2","#2e7d32","#c2185b","#455a64","#f57c00","#512da8"];
+  const ctx=document.getElementById("line").getContext("2d");
+  const line=new Chart(ctx,{type:"line",data:{labels:[],datasets:[]},
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{x:{title:{display:true,text:"N"}},y:{beginAtZero:true,title:{display:true,text:"Value"},ticks:{callback:v=>fmt(v)}}},
+      elements:{point:{radius:2}},plugins:{legend:{display:false}}}});
+
+  function drawPaths(t,paths){
+    line.data.labels=t.map(String);
+    line.data.datasets=paths.map((row,i)=>({label:"p"+(i+1),data:row,
+      borderColor:COLORS[i%COLORS.length],backgroundColor:COLORS[i%COLORS.length],tension:0.15,fill:false}));
+    line.update();
+  }
+  function renderKPI(years,counts){
+    const hdr=$("add4RowHeader"), cnt=$("add4RowCounts");
+    hdr.querySelectorAll("td").forEach(x=>x.remove()); cnt.querySelectorAll("td").forEach(x=>x.remove());
+    (years||[]).forEach(v=>{const td=document.createElement("td"); td.textContent=fmt(v); hdr.appendChild(td);});
+    (counts||[]).forEach(v=>{const td=document.createElement("td"); td.textContent=fmt(v); cnt.appendChild(td);});
+  }
+
+  // WebR
+  import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
+  const webr=new WebR();
+
+  // helpers
+  const get=(obj,name)=> obj?.[name] ?? (Array.isArray(obj?.names)? obj.values[obj.names.indexOf(name)] : undefined);
+  const vec=x=> x==null?[]: Array.isArray(x)? x.map(Number) : (x.values? x.values.map(Number) : (typeof x==="number"?[x]:[]));
+
+  async function init(){
+    await webr.init();
+    const code=await (await fetch("./r/uadd4.R")).text();
+    await webr.evalR(code);
+  }
+
+  async function compute(){
+    try{
+      refresh();
+      const r = await webr.evalR(`
+        out <- uadd4(
+          wealth0=${+wealthEl.value}, spend=${+spendEl.value}, min_years=${parseInt(minyrsEl.value,10)},
+          mu_real=${+muEl.value}, vol_real=${+volEl.value},
+          nper=25, n_scen=10000, n_show=10,
+          seed=${seedVal!==null?seedVal:"NULL"},
+          spend_timing="begin", ruin_rule="inclusive"
+        ); out
+      `);
+      const root=await r.toJs();
+      const res=get(root,"results")||root.results;
+
+      const t=vec(get(res,"t"));
+      const prob=vec(get(res,"prob_ok"))[0] ?? Number(get(res,"prob_ok")) ?? 0;
+      probBadge.textContent=pct(prob,2);
+
+      const years=vec(get(res,"table_years"));
+      const counts=vec(get(res,"table_cum_ruins"));
+
+      const pathsO=get(res,"paths"), flat=vec(pathsO);
+      let nrow=0,ncol=0;
+      if(pathsO && pathsO.dim){ const d=vec(pathsO.dim); if(d.length===2){ nrow=d[0]; ncol=d[1]; } }
+      if((!nrow||!ncol)&&t.length>0&&flat.length%t.length===0){ ncol=t.length; nrow=flat.length/ncol; }
+      const paths=[]; if(nrow>0&&ncol>0&&flat.length===nrow*ncol){
+        for(let r=0;r<nrow;r++){ const row=[]; for(let c=0;c<ncol;c++) row.push(flat[r+c*nrow]); paths.push(row); }
+      }
+
+      drawPaths(t,paths);
+      renderKPI(years,counts);
+      if (debug) log({prob, tLen:t.length, nPaths:paths.length, rowLen:paths[0]?.length||0, years, counts});
+    }catch(e){ log("Compute error: "+(e?.message||e)); }
+  }
+
+  document.getElementById("compute").addEventListener("click", compute);
+  [wealthEl,spendEl,minyrsEl,muEl,volEl].forEach(el=>el.addEventListener("input", compute));
+  await init(); await compute();
+</script>
+</body>
+</html>
