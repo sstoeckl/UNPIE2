@@ -34,6 +34,32 @@
   .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:.35rem;vertical-align:middle}
   .debug{margin-top:6px;background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;flex:0 0 110px;display:none}
   pre{margin:0;font-size:.82rem}
+  .app-copyright {
+    position: fixed;
+    right: 14px;
+    bottom: 14px;
+    z-index: 9999;
+    font: 12px/1.3 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: #444;
+    background: rgba(255,255,255,0.7);
+    padding: 6px 10px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.08);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    transition: opacity .2s ease, transform .2s ease;
+  }
+  .app-copyright:hover {
+    opacity: 0.95;
+    transform: translateY(-1px);
+  }
+  @media (prefers-color-scheme: dark) {
+    .app-copyright {
+      color: #ddd;
+      background: rgba(25,25,25,0.6);
+      box-shadow: 0 2px 10px rgba(0,0,0,.25);
+    }
+  }
 </style>
 </head>
 <body>
@@ -169,5 +195,8 @@
   [pvEl,nperEl,rateEl].forEach(el=>el.addEventListener("input", compute));
   await init(); await compute();
 </script>
+<div class="app-copyright" role="contentinfo" aria-label="Copyright">
+  © 2025 by Dr. S. Stöckl
+</div>
 </body>
 </html>
