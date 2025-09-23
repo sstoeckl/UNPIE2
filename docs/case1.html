@@ -35,32 +35,29 @@
   .debug{margin-top:6px;background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;flex:0 0 110px;display:none}
   pre{margin:0;font-size:.82rem}
   /* Äußerer Rahmen um die gesamte App */
-  .app-wrapper{
-    position: relative;           /* Referenz für den Footer */
-    border: 1px solid #d9d9df;    /* Rahmensichtbarkeit */
-    border-radius: 12px;
+  .app-wrapper {
+    border: 1px solid #ccc;   /* schmaler Rahmen */
+    border-radius: 8px;
     background: #fff;
-    padding: 8px;                 /* Luft zwischen Rahmen und App-Inhalt */
-    /* Optional: Schatten wie deine Panels */
-    box-shadow: 0 1px 2px rgba(0,0,0,.04);
+    padding: 6px;             /* minimaler Innenabstand */
+    position: relative;       /* Bezugspunkt für Footer */
+    display: flex;
+    flex-direction: column;
+    min-width: 320px;         /* damit nichts kaputt bricht */
   }
   
-  /* Footer unten rechts im äußeren Rahmen */
-  .app-footer{
-    position: absolute;
-    right: 12px;
-    bottom: 8px;
+  /* App-Inhalt soll normal wachsen */
+  .app-wrapper .wrap {
+    flex: 1 1 auto;
+  }
+  
+  /* Footer fix unten rechts, aber nie Überlappung */
+  .app-footer {
+    align-self: flex-end;     /* rechtsbündig */
+    margin-top: 6px;          /* kleiner Abstand über Footer */
+    font-size: 0.75rem;
     color: #666;
-    font-size: 0.75rem;           /* dezent */
-    font-variant-numeric: tabular-nums;
-    pointer-events: none;         /* nicht anklickbar (bei Text) */
-    user-select: none;
-  }
-  
-  /* Falls Inhalt sehr hoch ist und Footer überlappt:
-     gib dem Wrapper unten etwas extra Platz */
-  @media (min-width:0px){
-    .app-wrapper{ padding-bottom: 28px; }
+    white-space: nowrap;
   }
 </style>
 </head>
