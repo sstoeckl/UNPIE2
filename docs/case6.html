@@ -32,9 +32,58 @@
   .kpi{background:#f7f7f9;border-radius:10px;padding:.45rem .7rem;font-variant-numeric:tabular-nums}
   .debug{margin-top:6px;background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;flex:0 0 110px;display:none}
   pre{margin:0;font-size:.82rem}
+  /* Zentrierter, schmal gepaddeter Außenrahmen, der NICHT fensterbreit wird */
+  .app-shell{
+    /* Breite: so breit wie die App, aber nie über den Viewport hinaus */
+    max-width: 1120px;                 /* ca. .wrap(1100) + je 10–12px Luft */
+    width: min(1120px, calc(100% - 16px)); /* auf kleinen Screens näher ran */
+    margin: 10px auto;                 /* zentrieren! */
+  
+    /* Rahmen-Optik */
+    border: 1px solid #d9d9df;
+    border-radius: 10px;
+    background: #fff;
+    padding: 6px;                      /* schmaler Rahmen-Padding */
+  
+    /* Layout: Inhalt + Footer eigene Zeile (kein Überlappen) */
+    display: grid;
+    grid-template-rows: auto min-content;
+    row-gap: 18px;
+  
+    box-shadow: 0 1px 2px rgba(0,0,0,.04); /* optional, wie Panels */
+  }
+  
+  /* WICHTIG: .wrap darf die Breite nicht wieder verengen/zentrieren */
+  .wrap{
+    max-width: 100%;                   /* vorher stand hier meist 1100px */
+    margin: 0;                         /* keine zusätzliche Zentrierung hier */
+  }
+  
+  /* Falls deine App irgendwo fix auf Höhe gesetzt war: aufheben */
+  .app{ height: auto; min-height: 0; }
+  
+  /* Footer sitzt in der unteren Grid-Zeile, rechtsbündig – niemals Overlay */
+  .app-shell__footer{
+    justify-self: end;
+    align-self: end;
+    font-size: .75rem;
+    color: #666;
+    white-space: nowrap;
+  }
+  
+  /* Responsive Finetuning: auf sehr kleinen Screens noch knapper */
+  @media (max-width: 480px){
+    .app-shell{
+      width: calc(100% - 10px);
+      padding: 4px;
+      row-gap: 4px;
+      border-radius: 8px;
+    }
+  }
 </style>
 </head>
 <body>
+  <div class="app-shell">
 <div class="app">
   <div class="wrap">
     <div class="title" id="title">App 6: Required starting capital for constant periodic expenses</div>
@@ -82,6 +131,8 @@
       </div>
     </div>
   </div>
+</div>
+  <div class="app-shell__footer">© 2025 by Dr. S. Stöckl</div>
 </div>
 
 <script type="module">
