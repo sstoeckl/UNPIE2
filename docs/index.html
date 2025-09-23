@@ -324,9 +324,9 @@
 
     <template id="app-card">
       <article class="rounded-2xl border bg-white shadow-sm overflow-hidden flex flex-col">
-        <div class="aspect-[16/9] bg-slate-100 flex items-center justify-center">
+        <div class="aspect-[16/9] bg-slate-100 flex items-center justify-center" data-aspect>
           <img class="w-full h-full object-cover hidden" alt="App screenshot" />
-          <div class="text-slate-400 text-sm">(Add screenshot)</div>
+          <div class="text-slate-400 text-sm" data-placeholder>(Add screenshot)</div>
         </div>
         <div class="p-5 flex-1 flex flex-col">
           <h3 class="font-semibold leading-snug"></h3>
@@ -393,28 +393,26 @@
         section.items.forEach(app => {
           const node = cardTmpl.content.cloneNode(true);
           const img = node.querySelector('img');
-          const imgWrapper = node.querySelector('.aspect-[16/9]');
           const title = node.querySelector('h3');
           const desc = node.querySelector('p');
           const [aEn, aDe] = node.querySelectorAll('a');
-
+          
           title.textContent = app.title;
           desc.textContent = app.desc;
-
-          // Build absolute URLs with language params
+          
           const page = `${BASE}/${app.id}.html`;
           aEn.href = `${page}?lang=en`;
           aDe.href = `${page}?lang=de`;
-
-          // Thumbnails
+          
           if (app.thumb) {
             img.src = `${BASE}/assets/screenshots/${app.thumb}`;
             img.alt = `${app.title} — screenshot`;
             img.classList.remove('hidden');
-            const placeholder = imgWrapper.querySelector('div');
+            // ✅ new: use data-* hooks
+            const placeholder = node.querySelector('[data-placeholder]');
             if (placeholder) placeholder.classList.add('hidden');
           }
-
+          
           grid.appendChild(node);
         });
 
