@@ -36,28 +36,20 @@
   pre{margin:0;font-size:.82rem}
   /* Äußerer Rahmen um die gesamte App */
   .app-wrapper {
-    border: 1px solid #ccc;   /* schmaler Rahmen */
+    border: 1px solid #ccc;
     border-radius: 8px;
     background: #fff;
-    padding: 6px;             /* minimaler Innenabstand */
-    position: relative;       /* Bezugspunkt für Footer */
-    display: flex;
-    flex-direction: column;
-    min-width: 320px;         /* damit nichts kaputt bricht */
+    padding: 6px 6px 24px 6px; /* unten extra Platz für Footer */
+    position: relative;
   }
   
-  /* App-Inhalt soll normal wachsen */
-  .app-wrapper .wrap {
-    flex: 1 1 auto;
-  }
-  
-  /* Footer fix unten rechts, aber nie Überlappung */
   .app-footer {
-    align-self: flex-end;     /* rechtsbündig */
-    margin-top: 6px;          /* kleiner Abstand über Footer */
+    position: absolute;
+    right: 8px;
+    bottom: 4px;
     font-size: 0.75rem;
     color: #666;
-    white-space: nowrap;
+    background: #fff;         /* verhindert Überlappung optisch */
   }
 </style>
 </head>
