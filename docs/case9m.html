@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>UNPIE2 – Case 8m</title>
+
+<!-- Charts + webR -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module" src="https://webr.r-wasm.org/latest/webr.mjs"></script>
+
+<style>
+  html,body{height:100%;margin:0}
+  body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#fff;color:#111}
+  .app{height:720px;display:grid;place-items:stretch}
+  .wrap{max-width:1100px;margin:0 auto;padding:8px 12px;height:100%;box-sizing:border-box}
+  .title{text-align:center;margin:4px 0 8px;font-size:1.15rem}
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:12px;height:calc(100% - 38px)}
+  @media (max-width:900px){.grid{grid-template-columns:1fr}}
+  .panel{border:1px solid #e8e8e8;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);background:#fff}
+  .left{padding:10px;overflow:auto}
+  .group{border:1px solid #ddd;border-radius:10px;padding:10px;margin-bottom:10px}
+  .group h3{margin:0 0 8px;font-size:1rem}
+  .row{display:flex;align-items:center;gap:.8rem}
+  .row + .row{margin-top:8px}
+  .val{width:7rem;text-align:right;color:#666;font-variant-numeric:tabular-nums}
+  input[type=range]{width:100%}
+  button{padding:.55rem .9rem;border:0;border-radius:10px;background:#eee;cursor:pointer}
+  .right{padding:10px;display:flex;flex-direction:column;height:100%;gap:10px}
+  .chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .chip{background:#f7f7f9;border:1px solid #e7e7ea;border-radius:999px;padding:.35rem .7rem;font-variant-numeric:tabular-nums}
+  .chartWrap{flex:1 0 auto;height:380px}
+  #bar{width:100%;height:100%}
+  .legend{display:flex;gap:1rem;justify-content:center;margin-top:6px;color:#666;font-size:.92rem;flex-wrap:wrap}
+  .below{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;color:#444}
+  .below .chip{background:#fff}
+  .debug{background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;display:none}
+  pre{margin:0;font-size:.82rem}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="wrap">
+    <div class="title" id="title">App 8m: Real pension payments that can be financed by given (real) savings</div>
+
+    <div class="grid">
+      <!-- LEFT: Controls -->
+      <div class="panel left">
+        <div class="group">
+          <h3 id="gPmt">Yearly (real) savings payments</h3>
+          <div class="row">
+            <label for="pmt" style="flex:1" id="lPmt">Payment per year</label>
+            <input id="pmt" type="range" min="0" max="50000" step="100" value="1000">
+            <div class="val" id="pmtLabel">1,000</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 id="gHorSave">Time horizon for savings (years)</h3>
+          <div class="row">
+            <label for="nSave" style="flex:1" id="lSave">Years</label>
+            <input id="nSave" type="range" min="1" max="50" step="1" value="35">
+            <div class="val" id="nSaveLabel">35</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 id="gRates">Rates</h3>
+          <div class="row">
+            <label for="rate" style="flex:1" id="lRate">Interest rate r</label>
+            <input id="rate" type="range" min="0" max="0.08" step="0.0005" value="0.02">
+            <div class="val" id="rateLabel">2.00%</div>
+          </div>
+          <div class="row">
+            <label for="infl" style="flex:1" id="lInfl">Inflation rate i</label>
+            <input id="infl" type="range" min="0" max="0.06" step="0.0005" value="0.01">
+            <div class="val" id="inflLabel">1.00%</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3 id="gMort">Mortality (Gompertz–Makeham)</h3>
+          <div class="row">
+            <label for="age" style="flex:1" id="lAge">Pension starting age x</label>
+            <input id="age" type="range" min="50" max="100" step="1" value="65">
+            <div class="val" id="ageLabel">65</div>
+          </div>
+          <div class="row">
+            <label for="lambda" style="flex:1" id="lLambda">Accidental death λ</label>
+            <input id="lambda" type="range" min="0" max="0.02" step="0.0001" value="0">
+            <div class="val" id="lambdaLabel">0.0000</div>
+          </div>
+          <div class="row">
+            <label for="modal" style="flex:1" id="lModal">Modal age m</label>
+            <input id="modal" type="range" min="70" max="95" step="0.1" value="82.3">
+            <div class="val" id="modalLabel">82.3</div>
+          </div>
+          <div class="row">
+            <label for="disp" style="flex:1" id="lDisp">Dispersion b</label>
+            <input id="disp" type="range" min="5" max="20" step="0.1" value="11.4">
+            <div class="val" id="dispLabel">11.4</div>
+          </div>
+        </div>
+
+        <button id="compute">Compute</button>
+      </div>
+
+      <!-- RIGHT: Chips + Chart + Text + Debug -->
+      <div class="panel right">
+        <div class="chips">
+          <div class="chip"><strong id="chip1">Yearly savings (real):</strong> <span id="saveOut">—</span></div>
+          <div class="chip"><strong id="chip2">Yearly spending possible (real):</strong> <span id="spendOut">—</span></div>
+        </div>
+
+        <div class="chartWrap"><canvas id="bar"></canvas></div>
+        <div class="legend">
+          <span style="color:#f29f05">■</span><span id="legSave">Yearly (real) savings while working</span>
+          <span style="color:#6e6e6e">■</span><span id="legSpend">Yearly (real) spending during retirement (actuarial)</span>
+        </div>
+
+        <div class="below">
+          <div class="chip"><strong id="lblFV">Future wealth (real) at retirement:</strong> <span id="fvOut">—</span></div>
+          <div class="chip"><strong id="lblET">Expected remaining lifetime:</strong> <span id="etOut">—</span></div>
+          <div class="chip"><strong id="lblBeta">Fair conversion rate (real):</strong> <span id="betaOut">—</span></div>
+        </div>
+
+        <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // --- i18n (like 7m) ----------------------------------------------------
+  const params=new URLSearchParams(location.search);
+  const lang=(params.get("lang")||"en").toLowerCase();
+  const isDE=lang.startsWith("de");
+  const LOCALE=isDE ? "de-DE" : "en-US";
+  const I18N={
+    en:{
+      title:"App 8m: Real pension payments that can be financed by given (real) savings",
+      gPmt:"Yearly (real) savings payments", lPmt:"Payment per year",
+      gHorSave:"Time horizon for savings (years)", lSave:"Years",
+      gRates:"Rates", lRate:"Interest rate r", lInfl:"Inflation rate i",
+      gMort:"Mortality (Gompertz–Makeham)", lAge:"Pension starting age x", lLambda:"Accidental death λ", lModal:"Modal age m", lDisp:"Dispersion b",
+      chip1:"Yearly savings (real):", chip2:"Yearly spending possible (real):",
+      legSave:"Yearly (real) savings while working", legSpend:"Yearly (real) spending during retirement (actuarial)",
+      lblFV:"Future wealth (real) at retirement:", lblET:"Expected remaining lifetime:", lblBeta:"Fair conversion rate (real):",
+      btn:"Compute"
+    },
+    de:{
+      title:"App 8m: Reale Rentenzahlungen aus gegebenen (realen) Ersparnissen",
+      gPmt:"Jährliche (reale) Sparzahlungen", lPmt:"Zahlung pro Jahr",
+      gHorSave:"Sparhorizont (Jahre)", lSave:"Jahre",
+      gRates:"Sätze", lRate:"Zinssatz r", lInfl:"Inflationsrate i",
+      gMort:"Sterblichkeit (Gompertz–Makeham)", lAge:"Renteneintrittsalter x", lLambda:"Unfallsterblichkeit λ", lModal:"Modales Alter m", lDisp:"Dispersion b",
+      chip1:"Jährliche Ersparnis (real):", chip2:"Reale Rentenzahlung (aktuarisch):",
+      legSave:"Jährliche (reale) Ersparnisse während Erwerbsphase", legSpend:"Jährliche (reale) Ausgaben im Ruhestand (aktuarisch)",
+      lblFV:"Reales Vermögen bei Rentenbeginn:", lblET:"Erwartete Restlebensdauer:", lblBeta:"Fairer Umwandlungssatz (real):",
+      btn:"Berechnen"
+    }
+  };
+  const T=I18N[isDE?"de":"en"];
+  const set=(id,txt)=>{const el=document.getElementById(id); if(el) el.textContent=txt;};
+  set("title",T.title); set("gPmt",T.gPmt); set("lPmt",T.lPmt);
+  set("gHorSave",T.gHorSave); set("lSave",T.lSave);
+  set("gRates",T.gRates); set("lRate",T.lRate); set("lInfl",T.lInfl);
+  set("gMort",T.gMort); set("lAge",T.lAge); set("lLambda",T.lLambda); set("lModal",T.lModal); set("lDisp",T.lDisp);
+  set("chip1",T.chip1); set("chip2",T.chip2); set("legSave",T.legSave); set("legSpend",T.legSpend);
+  set("lblFV",T.lblFV); set("lblET",T.lblET); set("lblBeta",T.lblBeta);
+  document.getElementById("compute").textContent=T.btn;
+
+  // --- helpers (like 7m) -------------------------------------------------
+  const fmt=x=>Number(x).toLocaleString(LOCALE,{maximumFractionDigits:2});
+  const fmtPct=x=>(Number(x)*100).toLocaleString(LOCALE,{maximumFractionDigits:2})+"%";
+  const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
+  const dbg=document.getElementById("debug"), dbgBox=document.getElementById("debugBox"); if(debug) dbgBox.style.display="block";
+  const log=v=>{ if(debug) dbg.textContent=typeof v==="string"?v:JSON.stringify(v,null,2); };
+
+  // --- UI elements --------------------------------------------------------
+  const pmt=document.getElementById("pmt"),
+        nSave=document.getElementById("nSave"),
+        rate=document.getElementById("rate"),
+        infl=document.getElementById("infl"),
+        age=document.getElementById("age"),
+        lambda=document.getElementById("lambda"),
+        modal=document.getElementById("modal"),
+        disp=document.getElementById("disp");
+
+  const pmtL=document.getElementById("pmtLabel"),
+        nSaveL=document.getElementById("nSaveLabel"),
+        rateL=document.getElementById("rateLabel"),
+        inflL=document.getElementById("inflLabel"),
+        ageL=document.getElementById("ageLabel"),
+        lambdaL=document.getElementById("lambdaLabel"),
+        modalL=document.getElementById("modalLabel"),
+        dispL=document.getElementById("dispLabel");
+
+  function refresh(){
+    pmtL.textContent=parseFloat(pmt.value).toLocaleString(LOCALE,{maximumFractionDigits:0});
+    nSaveL.textContent=parseInt(nSave.value,10).toLocaleString(LOCALE);
+    rateL.textContent=(parseFloat(rate.value)*100).toLocaleString(LOCALE,{maximumFractionDigits:2})+"%";
+    inflL.textContent=(parseFloat(infl.value)*100).toLocaleString(LOCALE,{maximumFractionDigits:2})+"%";
+    ageL.textContent=parseInt(age.value,10).toLocaleString(LOCALE);
+    lambdaL.textContent=parseFloat(lambda.value).toLocaleString(LOCALE,{maximumFractionDigits:4});
+    modalL.textContent=parseFloat(modal.value).toLocaleString(LOCALE,{maximumFractionDigits:1});
+    dispL.textContent=parseFloat(disp.value).toLocaleString(LOCALE,{maximumFractionDigits:1});
+  }
+  refresh();
+
+  // --- Chart (same options style as 7m) ----------------------------------
+  const ctx=document.getElementById("bar").getContext("2d");
+  const bar=new Chart(ctx,{type:"bar",data:{labels:[""],datasets:[]},
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{x:{stacked:false},y:{beginAtZero:true}},
+      plugins:{legend:{display:true}}
+    }});
+  function draw(vals){
+    bar.data.labels=[""];
+    bar.data.datasets=[
+      {label:T.legSave,  data:[vals.save],  backgroundColor:"#f29f05"},
+      {label:T.legSpend, data:[vals.spend], backgroundColor:"#6e6e6e"}
+    ];
+    bar.update();
+  }
+
+  // --- webR bridge --------------------------------------------------------
+  import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
+  const webr=new WebR();
+  function unwrap(x){
+    if(x==null||typeof x!=="object") return x;
+    if(x.type==="list"){ const o={}; (x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i])); return o; }
+    if(Array.isArray(x.values)) return x.values.length===1?unwrap(x.values[0]):x.values.map(unwrap);
+    return x;
+  }
+  const num=x=>typeof x==="number"?x:(x&&x.values?x.values[0]:Array.isArray(x)?x[0]:NaN);
+
+  async function init(){
+    await webr.init();
+    // Achtung: Dateiname/Schreibweise muss exakt stimmen:
+    const r=await (await fetch("./r/ucas8m.r")).text();  // <- ucas8m.r
+    await webr.evalR(r);
+  }
+
+  async function compute(){
+    try{
+      refresh();
+      const expr = `ucas8m(pmt_real_save=${+pmt.value},
+                           nper_save=${parseInt(nSave.value,10)},
+                           rate=${+rate.value}, inflation=${+infl.value},
+                           x=${parseInt(age.value,10)}, lambda=${+lambda.value},
+                           m=${+modal.value}, b=${+disp.value})`;
+      const res = await webr.evalR(expr);
+      let js = await res.toJs(); if(js&&js.type) js=unwrap(js);
+      const R = js.results || {};
+
+      const save   = num(js.inputs?.pmt_real_save);
+      const spend  = num(R.spend_real_during_retirement);
+      const K      = num(R.fv_real_at_retirement);
+      const ETx    = num(R.expected_remaining_lifetime);
+      const beta   = num(R.fair_conversion_rate);
+
+      document.getElementById("saveOut").textContent  = fmt(save);
+      document.getElementById("spendOut").textContent = fmt(spend);
+      document.getElementById("fvOut").textContent    = fmt(K);
+      document.getElementById("etOut").textContent    = fmt(ETx);
+      document.getElementById("betaOut").textContent  = (beta??0).toLocaleString(LOCALE,{maximumFractionDigits:4});
+
+      draw({save,spend});
+      log(js);
+    }catch(e){ log("Compute error: "+(e?.message||e)); }
+  }
+
+  document.getElementById("compute").addEventListener("click", compute);
+  [pmt,nSave,rate,infl,age,lambda,modal,disp].forEach(el=>el.addEventListener("input", compute));
+
+  await init(); await compute();
+</script>
+</body>
+</html>
