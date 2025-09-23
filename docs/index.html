@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PENSIONFINANCE — Project Overview</title>
+  <title>Understanding Pensions in Europe (UNPIE) — Project Overview</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <meta name="description" content="PENSIONFINANCE — An initiative to improve pension-finance literacy in Europe via online courses and interactive web applications." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,7 +20,7 @@
   <!-- Header -->
   <header class="border-b bg-white sticky top-0 z-40">
     <div class="container mx-auto px-4 py-4 flex items-center justify-between">
-      <a href="#" class="text-xl font-semibold tracking-tight text-[var(--brand)]">PENSIONS IN EUROPE</a>
+      <a href="#" class="text-xl font-semibold tracking-tight text-[var(--brand)]">UNDERSTANDING PENSIONS IN EUROPE (UNPIE)</a>
       <nav class="hidden md:flex gap-6 text-sm font-medium text-slate-700">
         <a href="#about" class="hover:text-[var(--brand)]">Project</a>
         <a href="#team" class="hover:text-[var(--brand)]">Team</a>
@@ -37,7 +37,7 @@
     <div class="container mx-auto px-4 pt-12 pb-10">
       <div class="grid md:grid-cols-2 gap-8 items-center">
         <div>
-          <h1 class="text-3xl md:text-4xl font-semibold leading-tight text-[var(--ink)]">Pension finance made clear.</h1>
+          <h1 class="text-3xl md:text-4xl font-semibold leading-tight text-[var(--ink)]">Understanding Pensions in Europe</h1>
           <p class="mt-4 text-lg text-slate-700 wp-serif">We bring essential pension-finance knowledge to European citizens and higher-education students through accessible online courses and hands-on web applications.</p>
           <div class="mt-6 flex flex-wrap gap-3">
             <a href="#apps" class="inline-flex items-center px-4 py-2 rounded bg-[var(--brand)] text-white hover:bg-[var(--brand-dark)]">Explore Apps</a>
@@ -123,7 +123,7 @@
   <!-- Apps -->
   <section id="apps" class="container mx-auto px-4 py-12">
     <h2 class="text-2xl font-semibold">Apps</h2>
-    <p class="mt-3 text-slate-700">All apps are deployed via GitHub Pages and cross-referenced under <code>https://www.sebastianstoeckl.com/UNPIE/</code>. Use the language parameter <code>?lang=en</code> or <code>?lang=de</code> to switch UI language. Screenshots are expected in <code>/UNPIE/assets/screenshots/</code> (see list below).</p>
+    <p class="mt-3 text-slate-700">All apps are deployed via GitHub Pages and linked under <code>https://www.sebastianstoeckl.com/UNPIE2/</code>. Use the language parameter <code>?lang=en</code> or <code>?lang=de</code> to switch UI language. Screenshots are expected in <code>/UNPIE2/assets/screenshots/</code> (see list below).</p>
 
     <!-- Accordion groups -->
     <div class="mt-6 space-y-4" id="apps-accordion"></div>
@@ -162,6 +162,7 @@
       const BASE = "https://www.sebastianstoeckl.com/UNPIE2";
 
       // Central list of apps grouped into sections with language-specific links
+      // App catalog used for homepage accordion (UNPIE2). Thumbnails are served from SITE_BASE, app pages from APPS_BASE.
       const APP_SECTIONS = [
         {
           title: "Introductory Apps",
@@ -244,14 +245,40 @@
   <!-- Contact / Footer -->
   <section id="contact" class="container mx-auto px-4 py-12">
     <h2 class="text-2xl font-semibold">Contact</h2>
-    <p class="mt-4 text-slate-700">For collaborations or questions, please reach out to the University of Liechtenstein team.</p>
+    <div class="mt-4 text-slate-700 space-y-1">
+      <div><strong>Chair in Finance</strong>, University of Liechtenstein</div>
+      <div>Fürst-Franz-Josef-Strasse, 9490 Vaduz, Liechtenstein</div>
+      <div>Project Director: Prof. Dr. Michael Hanke &nbsp;•&nbsp; Project Coordinator: Dr. Sebastian Stöckl</div>
+      <div class="text-sm text-slate-500">(Use an obfuscated email or contact form to avoid spam.)</div>
+    </div>
   </section>
 
   <footer class="border-t py-8 text-sm text-slate-600">
     <div class="container mx-auto px-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-      <p>© 2025 PENSIONFINANCE. All rights reserved.</p>
+      <p>© 2025 Understanding Pensions in Europe (UNPIE). All rights reserved.</p>
       <p>Supported by Erasmus+ (project heritage) and partner institutions. Logos and trademarks are property of their respective owners.</p>
     </div>
   </footer>
 </body>
+
+<!--
+ASSET PLACEMENT GUIDE (for /UNPIE2)
+===================================
+Place files relative to this HTML (one-page summary):
+
+/assets/
+  /logos/
+    uli.png           (University of Liechtenstein logo, transparent PNG, ~40–60 px height)
+    unibz.png         (Free University of Bozen–Bolzano logo)
+    keylane.png       (Keylane/Schantz logo)
+    erasmus.png       (optional Erasmus+ logo)
+  /team/
+    sebastian-stoeckl.jpg  (square/4:5 headshots, ≥600 px, optimized < 200 KB)
+    michael-hanke.jpg
+  /screenshots/
+    app1.png … app16.png, app7m.png, app8m.png, app9m.png  (16:9, 1280×720 or 1920×1080)
+
+Update the <img> paths in the Team/Partners section if filenames differ.
+Thumbnails for apps are set in the APP_SECTIONS array as `thumb: "appX.png"`.
+-->
 </html>
