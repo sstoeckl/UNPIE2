@@ -1,51 +1,215 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>UNPIE2 – Pension Finance Apps</title>
-<style>
-  html,body{height:100%;margin:0}
-  body{overflow:hidden;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#fff;color:#111}
-  .app{height:480px;display:grid;place-items:center}
-  .card{max-width:900px;width:100%;padding:24px;border:1px solid #e8e8e8;border-radius:14px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
-  h1{margin:0 0 8px;font-size:1.25rem;text-align:center}
-  p{margin:0 0 18px;text-align:center;color:#555}
-  ul{list-style:none;padding:0;margin:0;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-  a{display:inline-block;padding:10px 14px;border:1px solid #ddd;border-radius:10px;text-decoration:none;color:#111}
-  a:hover{background:#f7f7f9}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PENSIONFINANCE — Project Overview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <meta name="description" content="PENSIONFINANCE — An initiative to improve pension-finance literacy in Europe via online courses and interactive web applications." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root{--brand:#1e73be;--brand-dark:#165a93;--ink:#1f2937}
+    html { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans"; }
+    .wp-serif{ font-family: Merriweather, Georgia, serif; }
+    .container { max-width: 1100px; }
+  </style>
 </head>
-<body>
-  <div class="app">
-    <div class="card">
-      <h1>UNPIE2 – Pension Finance Apps</h1>
-      <p>Choose an app. You can pass <code>?lang=de_DE</code> and <code>&debug=TRUE</code> in the URL.</p>
-      <ul>
-        <li><a href="case1.html">Case 1: Single Contribution (EN)</a></li>
-        <li><a href="case1.html?lang=de_DE">Case 1: Einmalzahlung (DE)</a></li>
-      </ul>
-      <ul>
-        <li><a href="case2.html">Case 2: Nominal & Real (EN)</a></li>
-        <li><a href="case2.html?lang=de_DE">Case 2: Nominal & Real (DE)</a></li>
-      </ul>
-      <ul>
-        <li><a href="case3.html">Case 3: Periodic payments (EN)</a></li>
-        <li><a href="case3.html?lang=de_DE">Case 3: Periodische Sparzahlungen (DE)</a></li>
-      </ul>
-      <ul>
-        <li><a href="case4.html">Case 4: Periodic payments (nominal & real) (EN)</a></li>
-        <li><a href="case4.html?lang=de_DE">Case 4: Periodische Sparzahlungen (nominal & real) (DE)</a></li>
-      </ul>
-      <ul>
-        <li><a href="case5.html">Case 5: Periodic payments (nominal & real payments) (EN)</a></li>
-        <li><a href="case5.html?lang=de_DE">Case 5: Periodische Sparzahlungen (nominal & real Sparzahlungen) (DE)</a></li>
-      </ul>
-      <ul>
-        <li><a href="case6.html">Case 6: (EN)</a></li>
-        <li><a href="case6.html?lang=de_DE">Case 6:  (DE)</a></li>
-      </ul>  
+<body class="bg-slate-50 text-slate-900">
+  <!-- Header -->
+  <header class="border-b bg-white sticky top-0 z-40">
+    <div class="container mx-auto px-4 py-4 flex items-center justify-between">
+      <a href="#" class="text-xl font-semibold tracking-tight text-[var(--brand)]">PENSIONS IN EUROPE</a>
+      <nav class="hidden md:flex gap-6 text-sm font-medium text-slate-700">
+        <a href="#about" class="hover:text-[var(--brand)]">Project</a>
+        <a href="#team" class="hover:text-[var(--brand)]">Team</a>
+        <a href="#outcomes" class="hover:text-[var(--brand)]">Outcomes</a>
+        <a href="#events" class="hover:text-[var(--brand)]">Events</a>
+        <a href="#apps" class="hover:text-[var(--brand)]">Apps</a>
+        <a href="#contact" class="hover:text-[var(--brand)]">Contact</a>
+      </nav>
     </div>
-  </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="bg-sky-50/60">
+    <div class="container mx-auto px-4 pt-12 pb-10">
+      <div class="grid md:grid-cols-2 gap-8 items-center">
+        <div>
+          <h1 class="text-3xl md:text-4xl font-semibold leading-tight text-[var(--ink)]">Pension finance made clear.</h1>
+          <p class="mt-4 text-lg text-slate-700 wp-serif">We bring essential pension-finance knowledge to European citizens and higher-education students through accessible online courses and hands-on web applications.</p>
+          <div class="mt-6 flex flex-wrap gap-3">
+            <a href="#apps" class="inline-flex items-center px-4 py-2 rounded bg-[var(--brand)] text-white hover:bg-[var(--brand-dark)]">Explore Apps</a>
+            <a href="#outcomes" class="inline-flex items-center px-4 py-2 rounded border border-[var(--brand)] text-[var(--brand)] hover:bg-[var(--brand)] hover:text-white">See Outcomes</a>
+          </div>
+        </div>
+        <div class="md:justify-self-end">
+          <div class="rounded-2xl border bg-white shadow-sm p-5">
+            <p class="text-sm text-slate-600">An Erasmus+ inspired initiative. Improving financial literacy supports adequate and sustainable pensions in Europe.</p>
+            <ul class="mt-4 space-y-2 text-sm">
+              <li>• Two target groups: the general public and higher-education students.</li>
+              <li>• Modular learning from basics to advanced topics.</li>
+              <li>• Interactive apps for personal retirement planning scenarios.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- About -->
+  <section id="about" class="container mx-auto px-4 py-12">
+    <h2 class="text-2xl font-semibold">Project</h2>
+    <p class="mt-4 text-slate-700">Our goal is to transfer crucial knowledge about pension finance to the public and to students in related fields (finance, economics, business). Understanding pension systems requires elements of finance (discounting, annuities), insurance, demographics, and institutions. With demographics evolving and private savings becoming more important, informed individual decisions matter. We address this need through free, modular online courses and a suite of interactive applications that let users explore savings and retirement scenarios.</p>
+  </section>
+
+  <!-- Events (new) -->
+  <section id="events" class="container mx-auto px-4 py-12">
+    <h2 class="text-2xl font-semibold">Project Events</h2>
+    <div class="mt-6 grid md:grid-cols-2 gap-6">
+      <div class="rounded-2xl border bg-white p-5 shadow-sm">
+        <h3 class="font-semibold">Conference on Pension Finance and the Teaching of Pension Finance</h3>
+        <p class="mt-2 text-sm text-slate-700">University of Liechtenstein, <span class="whitespace-nowrap">August 29, 2019</span>. Paper session with contributors from leading institutions; plenary by Prof. Michael Hanke; keynote by Prof. Mogens Steffensen; presentation of the online courses developed in this project.</p>
+        <a class="mt-3 inline-flex text-sm text-[var(--brand)] hover:underline" href="https://pensionsineurope.eu/events/" target="_blank" rel="noopener">Read more</a>
+      </div>
+      <div class="rounded-2xl border bg-white p-5 shadow-sm">
+        <h3 class="font-semibold">Final Project Meeting in Vaduz</h3>
+        <p class="mt-2 text-sm text-slate-700">Vaduz, <span class="whitespace-nowrap">August 28–29, 2019</span>. Presentation of the final outputs (three online courses on courseware.uni.li), discussion of dissemination and next steps.</p>
+        <a class="mt-3 inline-flex text-sm text-[var(--brand)] hover:underline" href="https://pensionsineurope.eu/events/" target="_blank" rel="noopener">Read more</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Team / Partners -->
+  <section id="team" class="container mx-auto px-4 py-12">
+    <h2 class="text-2xl font-semibold">Project Team & Partners</h2>
+    <div class="mt-6 grid md:grid-cols-3 gap-6">
+      <div class="rounded-2xl border bg-white p-5 shadow-sm">
+        <img src="assets/logos/uli.png" alt="University of Liechtenstein" class="h-10 w-auto mb-3" />
+        <h3 class="font-semibold">University of Liechtenstein</h3>
+        <p class="mt-2 text-sm text-slate-700">Lead on curriculum design and online course development; research and dissemination.</p>
+      </div>
+      <div class="rounded-2xl border bg-white p-5 shadow-sm">
+        <img src="assets/logos/unibz.png" alt="Free University of Bozen–Bolzano" class="h-10 w-auto mb-3" />
+        <h3 class="font-semibold">Free University of Bozen–Bolzano</h3>
+        <p class="mt-2 text-sm text-slate-700">Co-development of online courses; pedagogical design and assessment.</p>
+      </div>
+      <div class="rounded-2xl border bg-white p-5 shadow-sm">
+        <img src="assets/logos/keylane.png" alt="Keylane / Schantz" class="h-10 w-auto mb-3" />
+        <h3 class="font-semibold">Keylane (Schantz)</h3>
+        <p class="mt-2 text-sm text-slate-700">Industry expertise and pension-planning software; integration with course modules.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Outcomes -->
+  <section id="outcomes" class="container mx-auto px-4 py-12">
+    <h2 class="text-2xl font-semibold">Outcomes</h2>
+    <div class="mt-6 grid md:grid-cols-2 gap-6">
+      <div class="rounded-2xl border bg-white p-5 shadow-sm">
+        <h3 class="font-semibold">Online Courses (MOOCs)</h3>
+        <p class="mt-2 text-sm text-slate-700">Two modular MOOCs: (1) an accessible course for citizens and (2) an advanced course for students. <strong>Status:</strong> content consolidation in progress; one course is currently piloted on Coursera to test delivery and engagement.</p>
+        <a class="mt-3 inline-flex text-sm text-[var(--brand)] hover:underline" href="https://pensionsineurope.eu/onlinecourses/" target="_blank" rel="noopener">Online Courses</a>
+      </div>
+      <div class="rounded-2xl border bg-white p-5 shadow-sm">
+        <h3 class="font-semibold">Interactive Web Applications</h3>
+        <p class="mt-2 text-sm text-slate-700">A suite of webR-powered tools that let users simulate savings paths, pensions, longevity effects, and ruin probabilities. These apps are embedded in the courses and freely accessible.</p>
+        <a class="mt-3 inline-flex text-sm text-[var(--brand)] hover:underline" href="https://pensionsineurope.eu/onlinecourses/online-software-applications/" target="_blank" rel="noopener">Online Software Applications</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Apps -->
+  <section id="apps" class="container mx-auto px-4 py-12">
+    <h2 class="text-2xl font-semibold">Apps</h2>
+    <p class="mt-3 text-slate-700">Browse the full set of applications. Each card includes a one-line description and links to the English and German versions (initially the same link; replace later if language-specific URLs differ). For screenshots, save images to <code>/assets/screenshots/</code> and set the <code>thumbnail</code> in the data section below.</p>
+
+    <div id="app-grid" class="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+
+    <template id="app-card">
+      <article class="rounded-2xl border bg-white shadow-sm overflow-hidden flex flex-col">
+        <div class="aspect-[16/9] bg-slate-100 flex items-center justify-center">
+          <img class="w-full h-full object-cover hidden" alt="App screenshot" />
+          <div class="text-slate-400 text-sm">(Add screenshot)</div>
+        </div>
+        <div class="p-5 flex-1 flex flex-col">
+          <h3 class="font-semibold leading-snug"></h3>
+          <p class="mt-2 text-sm text-slate-700 flex-1"></p>
+          <div class="mt-4 flex gap-2 text-sm">
+            <a class="px-3 py-1 rounded-lg bg-blue-700 text-white hover:bg-blue-800" target="_blank" rel="noopener">English</a>
+            <a class="px-3 py-1 rounded-lg bg-slate-900 text-white hover:bg-slate-800" target="_blank" rel="noopener">Deutsch</a>
+          </div>
+        </div>
+      </article>
+    </template>
+
+    <script>
+      // Central list of apps — add thumbnails later in /assets/screenshots/
+      const APPS = [
+        // Introductory apps (match pensionsineurope.eu order)
+        { title: "App 1: Future value of single savings payment", desc: "FV of a single savings payment.", url: "https://www.sebastianstoeckl.com/UNPIE2/case1.html?lang=en", thumbnail: "assets/screenshots/app1.png" },
+        { title: "App 2: Future value (nominal and real) of single savings payment", desc: "FV of one payment, with nominal vs real comparison.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app2.png" },
+        { title: "App 3: Future value of constant yearly savings payments", desc: "FV of constant annual savings.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app3.png" },
+        { title: "App 4: Future value (nominal and real) of constant (nominal) yearly savings payments", desc: "FV of nominal yearly savings in nominal vs real terms.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app4.png" },
+        { title: "App 5: Future value (nominal and real) of constant (real) yearly savings payments", desc: "FV of real yearly savings in nominal vs real terms.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app5.png" },
+        { title: "App 6: Required wealth to finance constant (nominal) yearly spending", desc: "Wealth needed for constant nominal spending.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app6.png" },
+        { title: "App 7: Required wealth to finance constant (nominal/real) yearly spending", desc: "Wealth needed for constant spending (nominal or real).", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app7.png" },
+        { title: "App 8: Real yearly spending financed by given (real) yearly savings", desc: "Real spending supported by given real savings.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app8.png" },
+        { title: "App 9: Yearly savings required to finance given yearly spending (both in real terms)", desc: "Savings needed to fund target real spending.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app9.png" },
+
+        // Apps including risk
+        { title: "App 10: Real yearly pension resulting from constant (real) yearly savings", desc: "Stochastic real pension from constant real savings.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app10.png" },
+        { title: "App 11: Real yearly savings required to reach minimum desired (real) yearly pension with probability p", desc: "Savings required to hit a target pension with probability p.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app11.png" },
+        { title: "App 12: Years to ruin when spending yearly from given retirement savings", desc: "Years to portfolio ruin under yearly spending.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app12.png" },
+        { title: "App 13: Maximum periodic spending possible to exceed specified minimum years to ruin with probability p", desc: "Max spending s.t. years-to-ruin ≥ threshold with probability p.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app13.png" },
+
+        // Longevity risk
+        { title: "App 7m: Pension fund’s view: Required wealth to finance constant (nominal/real) pension payments", desc: "Required wealth for lifelong pensions under mortality.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app7m.png" },
+        { title: "App 8m: Real pension payments that can be financed by given (real) savings", desc: "Real pension payments supported by given real savings.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app8m.png" },
+        { title: "App 9m: Savings required to finance given life-long continuous spending (both in real terms)", desc: "Savings needed for lifelong continuous real spending.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app9m.png" },
+        { title: "App 14: \"Fair\" conversion rate for given mortality and constant expected (or average) investment returns", desc: "Approximate fair annuity conversion rate given mortality & returns.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app14.png" },
+        { title: "App 15: Approximate probability of retirement ruin for given spending rate, wealth & log-normal real returns", desc: "Approximate ruin probability under log-normal returns.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app15.png" },
+        { title: "App 16: Moments and conditional survival probabilities for the Gompertz–Makeham distribution", desc: "Moments & survival probabilities under Gompertz–Makeham.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app16.png" },
+      ];
+
+      const grid = document.getElementById('app-grid');
+      const tmpl = document.getElementById('app-card');
+
+      APPS.forEach(app => {
+        const node = tmpl.content.cloneNode(true);
+        const img = node.querySelector('img');
+        const imgWrapper = node.querySelector('.aspect-[16/9]');
+        const title = node.querySelector('h3');
+        const desc = node.querySelector('p');
+        const aEn = node.querySelectorAll('a')[0];
+        const aDe = node.querySelectorAll('a')[1];
+
+        title.textContent = app.title;
+        desc.textContent = app.desc;
+        aEn.href = app.url; // replace if language-specific URL exists
+        aDe.href = app.url; // replace if language-specific URL exists
+
+        if (app.thumbnail) {
+          img.src = app.thumbnail; img.classList.remove('hidden');
+          imgWrapper.querySelector('div').classList.add('hidden');
+        }
+        grid.appendChild(node);
+      });
+    </script>
+  </section>
+
+  <!-- Contact / Footer -->
+  <section id="contact" class="container mx-auto px-4 py-12">
+    <h2 class="text-2xl font-semibold">Contact</h2>
+    <p class="mt-4 text-slate-700">For collaborations or questions, please reach out to the University of Liechtenstein team.</p>
+  </section>
+
+  <footer class="border-t py-8 text-sm text-slate-600">
+    <div class="container mx-auto px-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <p>© 2025 PENSIONFINANCE. All rights reserved.</p>
+      <p>Supported by Erasmus+ (project heritage) and partner institutions. Logos and trademarks are property of their respective owners.</p>
+    </div>
+  </footer>
 </body>
 </html>
