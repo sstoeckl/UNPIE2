@@ -123,9 +123,22 @@
   <!-- Apps -->
   <section id="apps" class="container mx-auto px-4 py-12">
     <h2 class="text-2xl font-semibold">Apps</h2>
-    <p class="mt-3 text-slate-700">Browse the full set of applications. Each card includes a one-line description and links to the English and German versions (initially the same link; replace later if language-specific URLs differ). For screenshots, save images to <code>/assets/screenshots/</code> and set the <code>thumbnail</code> in the data section below.</p>
+    <p class="mt-3 text-slate-700">All apps are deployed via GitHub Pages and cross-referenced under <code>https://www.sebastianstoeckl.com/UNPIE/</code>. Use the language parameter <code>?lang=en</code> or <code>?lang=de</code> to switch UI language. Screenshots are expected in <code>/UNPIE/assets/screenshots/</code> (see list below).</p>
 
-    <div id="app-grid" class="mt-6 grid sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+    <!-- Accordion groups -->
+    <div class="mt-6 space-y-4" id="apps-accordion"></div>
+
+    <template id="apps-section">
+      <details class="rounded-2xl border bg-white shadow-sm overflow-hidden">
+        <summary class="px-5 py-4 cursor-pointer font-semibold bg-slate-50 flex items-center justify-between">
+          <span class="section-title"></span>
+          <span class="text-slate-500 text-sm">(click to expand)</span>
+        </summary>
+        <div class="p-5">
+          <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 section-grid"></div>
+        </div>
+      </details>
+    </template>
 
     <template id="app-card">
       <article class="rounded-2xl border bg-white shadow-sm overflow-hidden flex flex-col">
@@ -137,7 +150,7 @@
           <h3 class="font-semibold leading-snug"></h3>
           <p class="mt-2 text-sm text-slate-700 flex-1"></p>
           <div class="mt-4 flex gap-2 text-sm">
-            <a class="px-3 py-1 rounded-lg bg-blue-700 text-white hover:bg-blue-800" target="_blank" rel="noopener">English</a>
+            <a class="px-3 py-1 rounded-lg bg-[var(--brand)] text-white hover:bg-[var(--brand-dark)]" target="_blank" rel="noopener">English</a>
             <a class="px-3 py-1 rounded-lg bg-slate-900 text-white hover:bg-slate-800" target="_blank" rel="noopener">Deutsch</a>
           </div>
         </div>
@@ -145,56 +158,85 @@
     </template>
 
     <script>
-      // Central list of apps — add thumbnails later in /assets/screenshots/
-      const APPS = [
-        // Introductory apps (match pensionsineurope.eu order)
-        { title: "App 1: Future value of single savings payment", desc: "FV of a single savings payment.", url: "https://www.sebastianstoeckl.com/UNPIE2/case1.html?lang=en", thumbnail: "assets/screenshots/app1.png" },
-        { title: "App 2: Future value (nominal and real) of single savings payment", desc: "FV of one payment, with nominal vs real comparison.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app2.png" },
-        { title: "App 3: Future value of constant yearly savings payments", desc: "FV of constant annual savings.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app3.png" },
-        { title: "App 4: Future value (nominal and real) of constant (nominal) yearly savings payments", desc: "FV of nominal yearly savings in nominal vs real terms.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app4.png" },
-        { title: "App 5: Future value (nominal and real) of constant (real) yearly savings payments", desc: "FV of real yearly savings in nominal vs real terms.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app5.png" },
-        { title: "App 6: Required wealth to finance constant (nominal) yearly spending", desc: "Wealth needed for constant nominal spending.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app6.png" },
-        { title: "App 7: Required wealth to finance constant (nominal/real) yearly spending", desc: "Wealth needed for constant spending (nominal or real).", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app7.png" },
-        { title: "App 8: Real yearly spending financed by given (real) yearly savings", desc: "Real spending supported by given real savings.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app8.png" },
-        { title: "App 9: Yearly savings required to finance given yearly spending (both in real terms)", desc: "Savings needed to fund target real spending.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app9.png" },
+      // Base for absolute links & assets
+      const BASE = "https://www.sebastianstoeckl.com/UNPIE2";
 
-        // Apps including risk
-        { title: "App 10: Real yearly pension resulting from constant (real) yearly savings", desc: "Stochastic real pension from constant real savings.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app10.png" },
-        { title: "App 11: Real yearly savings required to reach minimum desired (real) yearly pension with probability p", desc: "Savings required to hit a target pension with probability p.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app11.png" },
-        { title: "App 12: Years to ruin when spending yearly from given retirement savings", desc: "Years to portfolio ruin under yearly spending.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app12.png" },
-        { title: "App 13: Maximum periodic spending possible to exceed specified minimum years to ruin with probability p", desc: "Max spending s.t. years-to-ruin ≥ threshold with probability p.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app13.png" },
-
-        // Longevity risk
-        { title: "App 7m: Pension fund’s view: Required wealth to finance constant (nominal/real) pension payments", desc: "Required wealth for lifelong pensions under mortality.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app7m.png" },
-        { title: "App 8m: Real pension payments that can be financed by given (real) savings", desc: "Real pension payments supported by given real savings.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app8m.png" },
-        { title: "App 9m: Savings required to finance given life-long continuous spending (both in real terms)", desc: "Savings needed for lifelong continuous real spending.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app9m.png" },
-        { title: "App 14: \"Fair\" conversion rate for given mortality and constant expected (or average) investment returns", desc: "Approximate fair annuity conversion rate given mortality & returns.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app14.png" },
-        { title: "App 15: Approximate probability of retirement ruin for given spending rate, wealth & log-normal real returns", desc: "Approximate ruin probability under log-normal returns.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app15.png" },
-        { title: "App 16: Moments and conditional survival probabilities for the Gompertz–Makeham distribution", desc: "Moments & survival probabilities under Gompertz–Makeham.", url: "https://unpie.netlify.com", thumbnail: "assets/screenshots/app16.png" },
+      // Central list of apps grouped into sections with language-specific links
+      const APP_SECTIONS = [
+        {
+          title: "Introductory Apps",
+          items: [
+            { id:"case1",  title:"App 1: Future value of single savings payment", desc:"FV of a single savings payment.", thumb:"app1.png" },
+            { id:"case2",  title:"App 2: Future value (nominal and real) of single savings payment", desc:"FV of one payment, with nominal vs real comparison.", thumb:"app2.png" },
+            { id:"case3",  title:"App 3: Future value of constant yearly savings payments", desc:"FV of constant annual savings.", thumb:"app3.png" },
+            { id:"case4",  title:"App 4: Future value (nominal and real) of constant (nominal) yearly savings payments", desc:"FV of nominal yearly savings in nominal vs real terms.", thumb:"app4.png" },
+            { id:"case5",  title:"App 5: Future value (nominal and real) of constant (real) yearly savings payments", desc:"FV of real yearly savings in nominal vs real terms.", thumb:"app5.png" },
+            { id:"case6",  title:"App 6: Required wealth to finance constant (nominal) yearly spending", desc:"Wealth needed for constant nominal spending.", thumb:"app6.png" },
+            { id:"case7",  title:"App 7: Required wealth to finance constant (nominal/real) yearly spending", desc:"Wealth needed for constant spending (nominal or real).", thumb:"app7.png" },
+            { id:"case8",  title:"App 8: Real yearly spending financed by given (real) yearly savings", desc:"Real spending supported by given real savings.", thumb:"app8.png" },
+            { id:"case9",  title:"App 9: Yearly savings required to finance given yearly spending (both in real terms)", desc:"Savings needed to fund target real spending.", thumb:"app9.png" }
+          ]
+        },
+        {
+          title: "Apps Including Risk",
+          items: [
+            { id:"case10", title:"App 10: Real yearly pension resulting from constant (real) yearly savings", desc:"Stochastic real pension from constant real savings.", thumb:"app10.png" },
+            { id:"case11", title:"App 11: Real yearly savings required to reach minimum desired (real) yearly pension with probability p", desc:"Savings required to hit a target pension with probability p.", thumb:"app11.png" },
+            { id:"case12", title:"App 12: Years to ruin when spending yearly from given retirement savings", desc:"Years to portfolio ruin under yearly spending.", thumb:"app12.png" },
+            { id:"case13", title:"App 13: Maximum periodic spending possible to exceed specified minimum years to ruin with probability p", desc:"Max spending s.t. years-to-ruin ≥ threshold with probability p.", thumb:"app13.png" }
+          ]
+        },
+        {
+          title: "Longevity Risk & Mortality",
+          items: [
+            { id:"case7m",  title:"App 7m: Pension fund’s view — Required wealth to finance constant (nominal/real) pension payments", desc:"Required wealth for lifelong pensions under mortality.", thumb:"app7m.png" },
+            { id:"case8m",  title:"App 8m: Real pension payments that can be financed by given (real) savings", desc:"Real pension payments supported by given real savings.", thumb:"app8m.png" },
+            { id:"case9m",  title:"App 9m: Savings required to finance given life-long continuous spending (both in real terms)", desc:"Savings needed for lifelong continuous real spending.", thumb:"app9m.png" },
+            { id:"case14",  title:"App 14: \"Fair\" conversion rate for given mortality and constant expected (or average) investment returns", desc:"Approximate fair annuity conversion rate given mortality & returns.", thumb:"app14.png" },
+            { id:"case15",  title:"App 15: Approximate probability of retirement ruin for given spending rate, wealth & log-normal real returns", desc:"Approximate ruin probability under log-normal returns.", thumb:"app15.png" },
+            { id:"case16",  title:"App 16: Moments and conditional survival probabilities for the Gompertz–Makeham distribution", desc:"Moments & survival probabilities under Gompertz–Makeham.", thumb:"app16.png" }
+          ]
+        }
       ];
 
-      const grid = document.getElementById('app-grid');
-      const tmpl = document.getElementById('app-card');
+      const acc = document.getElementById('apps-accordion');
+      const secTmpl = document.getElementById('apps-section');
+      const cardTmpl = document.getElementById('app-card');
 
-      APPS.forEach(app => {
-        const node = tmpl.content.cloneNode(true);
-        const img = node.querySelector('img');
-        const imgWrapper = node.querySelector('.aspect-[16/9]');
-        const title = node.querySelector('h3');
-        const desc = node.querySelector('p');
-        const aEn = node.querySelectorAll('a')[0];
-        const aDe = node.querySelectorAll('a')[1];
+      APP_SECTIONS.forEach(section => {
+        const s = secTmpl.content.cloneNode(true);
+        s.querySelector('.section-title').textContent = section.title;
+        const grid = s.querySelector('.section-grid');
 
-        title.textContent = app.title;
-        desc.textContent = app.desc;
-        aEn.href = app.url; // replace if language-specific URL exists
-        aDe.href = app.url; // replace if language-specific URL exists
+        section.items.forEach(app => {
+          const node = cardTmpl.content.cloneNode(true);
+          const img = node.querySelector('img');
+          const imgWrapper = node.querySelector('.aspect-[16/9]');
+          const title = node.querySelector('h3');
+          const desc = node.querySelector('p');
+          const [aEn, aDe] = node.querySelectorAll('a');
 
-        if (app.thumbnail) {
-          img.src = app.thumbnail; img.classList.remove('hidden');
-          imgWrapper.querySelector('div').classList.add('hidden');
-        }
-        grid.appendChild(node);
+          title.textContent = app.title;
+          desc.textContent = app.desc;
+
+          // Build absolute URLs with language params
+          const page = `${BASE}/${app.id}.html`;
+          aEn.href = `${page}?lang=en`;
+          aDe.href = `${page}?lang=de`;
+
+          // Thumbnails
+          if (app.thumb) {
+            img.src = `${BASE}/assets/screenshots/${app.thumb}`;
+            img.alt = `${app.title} — screenshot`;
+            img.classList.remove('hidden');
+            const placeholder = imgWrapper.querySelector('div');
+            if (placeholder) placeholder.classList.add('hidden');
+          }
+
+          grid.appendChild(node);
+        });
+
+        acc.appendChild(s);
       });
     </script>
   </section>
