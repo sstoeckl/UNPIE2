@@ -3,9 +3,11 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>UNPIE2 – Case 8m</title>
+<title>UNPIE – Case 8m</title>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script type="module" src="https://webr.r-wasm.org/latest/webr.mjs"></script>
+
 <style>
   html,body{margin:0}
   body{font-family:system-ui,Segoe UI,Arial,sans-serif;color:#111}
@@ -28,8 +30,7 @@
   .chartWrap{height:420px}
   .legend{display:flex;gap:1rem;justify-content:center;margin-top:6px;color:#666;font-size:.92rem;flex-wrap:wrap}
   .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:.35rem;vertical-align:middle}
-  .info{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;color:#444}
-  .info .chip{background:#fff}
+  .below{margin-top:8px;text-align:center;color:#444;line-height:1.6;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -101,8 +102,8 @@
     <!-- RIGHT -->
     <div class="panel right">
       <div class="chips">
-        <div class="chip" id="chipSave"><strong>Yearly savings (real):</strong> <span id="saveOut">—</span></div>
-        <div class="chip" id="chipSpend"><strong>Real pension payment (continuous):</strong> <span id="spendOut">—</span></div>
+        <div class="chip"><strong id="chip1">Yearly savings (real):</strong> <span id="saveOut">—</span></div>
+        <div class="chip"><strong id="chip2">Yearly spending possible (real):</strong> <span id="spendOut">—</span></div>
       </div>
 
       <div class="chartWrap"><canvas id="bar"></canvas></div>
@@ -111,49 +112,54 @@
         <span><span class="dot" style="background:#9e9e9e"></span><span id="legSpend">Yearly (real) spending during retirement (actuarial)</span></span>
       </div>
 
-      <!-- Additional info per spec -->
-      <div class="info">
-        <div class="chip"><strong>K<sub>T</sub><sup>real</sup>:</strong> <span id="fvOut">—</span></div>
-        <div class="chip"><strong>a<sub>x</sub><sup>real</sup>:</strong> <span id="aOut">—</span></div>
-        <div class="chip"><strong>E[T<sub>x</sub>]:</strong> <span id="etOut">—</span></div>
-        <div class="chip"><strong>β* = 1/a:</strong> <span id="betaOut">—</span></div>
+      <div class="below">
+        <div><strong id="lblFV">Future wealth (real) at retirement:</strong> <span id="fvOut">—</span></div>
+        <div><strong id="lblET">Expected remaining lifetime:</strong> <span id="etOut">—</span></div>
+        <div><strong id="lblBeta">Fair conversion rate (real):</strong> <span id="betaOut">—</span></div>
       </div>
     </div>
   </div>
 </div>
 
 <script type="module">
-  // i18n (en/de)
-  const p=new URLSearchParams(location.search); const isDE=(p.get("lang")||"en").toLowerCase().startsWith("de");
-  const L={
-    en:{title:"App 8m: Real pension payments that can be financed by given (real) savings",
-        gPmt:"Yearly (real) savings payments", lPmt:"Payment per year",
-        gHorSave:"Time horizon for savings (years)", lSave:"Years",
-        gRates:"Rates", lRate:"Interest rate r", lInfl:"Inflation rate i",
-        gMort:"Mortality (Gompertz–Makeham)", lAge:"Pension starting age x", lLambda:"Accidental death λ", lModal:"Modal age m", lDisp:"Dispersion b",
-        chipSave:"Yearly savings (real):", chipSpend:"Real pension payment (continuous):",
-        legSave:"Yearly (real) savings while working", legSpend:"Yearly (real) spending during retirement (actuarial)",
-        K:"K\u209C\u1D63\u1D49\u02B3\u1D49\u02E1", a:"a\u2093\u1D63\u1D49\u02E1", ETx:"E[T\u2093]", beta:"β* = 1/a",
-        btn:"Compute"},
-    de:{title:"App 8m: Reale Rentenzahlungen aus gegebenen (realen) Ersparnissen",
-        gPmt:"Jährliche (reale) Sparzahlungen", lPmt:"Zahlung pro Jahr",
-        gHorSave:"Sparhorizont (Jahre)", lSave:"Jahre",
-        gRates:"Sätze", lRate:"Zinssatz r", lInfl:"Inflationsrate i",
-        gMort:"Sterblichkeit (Gompertz–Makeham)", lAge:"Renteneintrittsalter x", lLambda:"Unfallsterblichkeit λ", lModal:"Modales Alter m", lDisp:"Dispersion b",
-        chipSave:"Jährliche Ersparnis (real):", chipSpend:"Reale Rentenzahlung (kontinuierlich):",
-        legSave:"Jährliche (reale) Ersparnisse während Erwerbsphase", legSpend:"Jährliche (reale) Ausgaben im Ruhestand (aktuarisch)",
-        K:"K\u209C\u1D63\u1D49\u02B3\u1D49\u02E1", a:"a\u2093\u1D63\u1D49\u02E1", ETx:"E[T\u2093]", beta:"β* = 1/a",
-        btn:"Berechnen"}
+  // i18n (en/de via ?lang=de)
+  const qs=new URLSearchParams(location.search); const isDE=(qs.get("lang")||"en").toLowerCase().startsWith("de");
+  const T = {
+    en: {
+      title: "App 8m: Real pension payments that can be financed by given (real) savings",
+      gPmt:"Yearly (real) savings payments", lPmt:"Payment per year",
+      gHorSave:"Time horizon for savings (years)", lSave:"Years",
+      gRates:"Rates", lRate:"Interest rate r", lInfl:"Inflation rate i",
+      gMort:"Mortality (Gompertz–Makeham)", lAge:"Pension starting age x",
+      lLambda:"Accidental death λ", lModal:"Modal age m", lDisp:"Dispersion b",
+      chip1:"Yearly savings (real):", chip2:"Yearly spending possible (real):",
+      legSave:"Yearly (real) savings while working",
+      legSpend:"Yearly (real) spending during retirement (actuarial)",
+      fv:"Future wealth (real) at retirement:", et:"Expected remaining lifetime:", beta:"Fair conversion rate (real):",
+      btn:"Compute"
+    },
+    de: {
+      title: "App 8m: Reale Rentenzahlungen aus gegebenen (realen) Ersparnissen",
+      gPmt:"Jährliche (reale) Sparzahlungen", lPmt:"Zahlung pro Jahr",
+      gHorSave:"Sparhorizont (Jahre)", lSave:"Jahre",
+      gRates:"Sätze", lRate:"Zinssatz r", lInfl:"Inflationsrate i",
+      gMort:"Sterblichkeit (Gompertz–Makeham)", lAge:"Renteneintrittsalter x",
+      lLambda:"Unfallsterblichkeit λ", lModal:"Modales Alter m", lDisp:"Dispersion b",
+      chip1:"Jährliche Ersparnis (real):", chip2:"Reale Rentenzahlung (aktuarisch):",
+      legSave:"Jährliche (reale) Ersparnisse während Erwerbsphase",
+      legSpend:"Jährliche (reale) Ausgaben im Ruhestand (aktuarisch)",
+      fv:"Reales Vermögen bei Rentenbeginn:", et:"Erwartete Restlebensdauer:", beta:"Fairer Umwandlungssatz (real):",
+      btn:"Berechnen"
+    }
   }[isDE?"de":"en"];
 
   const set=(id,txt)=>{const e=document.getElementById(id); if(e) e.textContent=txt;};
-  set("title",L.title); set("gPmt",L.gPmt); set("lPmt",L.lPmt); set("gHorSave",L.gHorSave); set("lSave",L.lSave);
-  set("gRates",L.gRates); set("lRate",L.lRate); set("lInfl",L.lInfl);
-  set("gMort",L.gMort); set("lAge",L.lAge); set("lLambda",L.lLambda); set("lModal",L.lModal); set("lDisp",L.lDisp);
-  document.getElementById("chipSave").firstElementChild.textContent = L.chipSave+" ";
-  document.getElementById("chipSpend").firstElementChild.textContent= L.chipSpend+" ";
-  set("legSave",L.legSave); set("legSpend",L.legSpend);
-  document.getElementById("compute").textContent=L.btn;
+  set("title",T.title); set("gPmt",T.gPmt); set("lPmt",T.lPmt); set("gHorSave",T.gHorSave); set("lSave",T.lSave);
+  set("gRates",T.gRates); set("lRate",T.lRate); set("lInfl",T.lInfl);
+  set("gMort",T.gMort); set("lAge",T.lAge); set("lLambda",T.lLambda); set("lModal",T.lModal); set("lDisp",T.lDisp);
+  set("chip1",T.chip1); set("chip2",T.chip2); set("legSave",T.legSave); set("legSpend",T.legSpend);
+  set("lblFV",T.fv); set("lblET",T.et); set("lblBeta",T.beta);
+  document.getElementById("compute").textContent=T.btn;
 
   const LOCALE=isDE?"de-DE":"en-US";
   const fmt=x=>Number(x).toLocaleString(LOCALE,{maximumFractionDigits:2});
@@ -167,7 +173,8 @@
   function refresh(){
     E("pmtLabel").textContent=parseFloat(pmt.value).toLocaleString(LOCALE,{maximumFractionDigits:0});
     E("nSaveLabel").textContent=parseInt(nSave.value,10);
-    E("rateLabel").textContent=pct(rate.value); E("inflLabel").textContent=pct(infl.value);
+    E("rateLabel").textContent=pct(rate.value);
+    E("inflLabel").textContent=pct(infl.value);
     E("ageLabel").textContent=parseInt(age.value,10);
     E("lambdaLabel").textContent=parseFloat(lambda.value).toLocaleString(LOCALE,{maximumFractionDigits:4});
     E("modalLabel").textContent=parseFloat(modal.value).toLocaleString(LOCALE,{maximumFractionDigits:1});
@@ -176,16 +183,16 @@
   refresh(); [pmt,nSave,rate,infl,age,lambda,modal,disp].forEach(el=>el.addEventListener("input",refresh));
 
   // chart
-  const ctx=document.createElement("canvas"); document.querySelector(".chartWrap").appendChild(ctx);
+  const ctx=document.getElementById("bar").getContext("2d");
   const bar=new Chart(ctx,{type:"bar",data:{labels:[""],datasets:[
-    {label:L.legSave,  data:[0], backgroundColor:"#ff9800"},
-    {label:L.legSpend, data:[0], backgroundColor:"#9e9e9e"}
+    {label:T.legSave,  data:[0], backgroundColor:"#ff9800"},
+    {label:T.legSpend, data:[0], backgroundColor:"#9e9e9e"}
   ]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true}},plugins:{legend:{display:true}}}});
 
   // webR
   import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
   const webr=new WebR(); await webr.init();
-  const rcode = await (await fetch("./r/ucase8m.R")).text(); await webr.evalR(rcode);
+  const rcode = await (await fetch("./r/ucas8m.r")).text(); await webr.evalR(rcode);
 
   function unwrap(x){
     if(x==null||typeof x!=="object") return x;
@@ -196,26 +203,24 @@
   const num=x=>typeof x==="number"?x:(x&&x.values?x.values[0]:Array.isArray(x)?x[0]:NaN);
 
   async function compute(){
-    const expr = `ucase8m(pmt_real_save=${+pmt.value},
-                          nper_save=${parseInt(nSave.value,10)},
-                          rate=${+rate.value}, inflation=${+infl.value},
-                          x=${parseInt(age.value,10)}, lambda=${+lambda.value},
-                          m=${+modal.value}, b=${+disp.value})`;
+    const expr = `ucas8m(pmt_real_save=${+pmt.value},
+                         nper_save=${parseInt(nSave.value,10)},
+                         rate=${+rate.value}, inflation=${+infl.value},
+                         x=${parseInt(age.value,10)}, lambda=${+lambda.value},
+                         m=${+modal.value}, b=${+disp.value})`;
     const res = await webr.evalR(expr); let js = await res.toJs(); if(js&&js.type) js=unwrap(js);
 
     const A   = num(js.inputs?.pmt_real_save);
     const B   = num(js.results?.spend_real_during_retirement);
     const K   = num(js.results?.fv_real_at_retirement);
-    const a   = num(js.results?.annuity_factor_real);
     const ETx = num(js.results?.expected_remaining_lifetime);
     const beta= num(js.results?.fair_conversion_rate);
 
     E("saveOut").textContent  = fmt(A);
     E("spendOut").textContent = fmt(B);
     E("fvOut").textContent    = fmt(K);
-    E("aOut").textContent     = fmt(a);
     E("etOut").textContent    = fmt(ETx);
-    E("betaOut").textContent  = (beta?beta:0).toLocaleString(LOCALE,{maximumFractionDigits:4});
+    E("betaOut").textContent  = (beta??0).toLocaleString(LOCALE,{maximumFractionDigits:4});
 
     bar.data.datasets[0].data=[A];
     bar.data.datasets[1].data=[B];
