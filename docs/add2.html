@@ -119,3 +119,181 @@
             <tr id="add2RowWealth">
               <th class="label" id="kWealthHdr">Future value of savings (real):</th>
               <!-- 10 values inserted by JS -->
+            </tr>
+            <tr id="add2RowPension">
+              <th class="label" id="kPensHdr">Lifelong pension (real):</th>
+              <!-- 10 values inserted by JS -->
+            </tr>
+          </table>
+        </div>
+
+        <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  // URL params (+ seed) – same pattern as add4
+  const params = new URLSearchParams(location.search);
+  const debug  = (params.get("debug") || "FALSE").toUpperCase() === "TRUE";
+  const seedQS = params.get("seed");
+  const seedVal = seedQS ? parseInt(seedQS,10) : null;
+
+  // element helper
+  const $ = id => document.getElementById(id);
+
+  // UI elements
+  const pminEl=$("pmin"), nperEl=$("nper"), probEl=$("prob"),
+        muEl=$("mu"), volEl=$("vol"), convEl=$("conv");
+
+  const pminLbl=$("pminLabel"), nperLbl=$("nperLabel"), probLbl=$("probLabel"),
+        muLbl=$("muLabel"), volLbl=$("volLabel"), convLbl=$("convLabel");
+
+  const badge = $("savingsBadge");
+  const dbgEl = $("debug");
+  const debugBox = $("debugBox");
+  debugBox.style.display = debug ? "block" : "none";
+
+  const fmt = (x,opts={}) => Number(x).toLocaleString(undefined,{maximumFractionDigits:0,...opts});
+  const pct = x => (parseFloat(x)*100).toFixed(2)+"%";
+  const log = x => { if (debug) dbgEl.textContent = typeof x==="string" ? x : JSON.stringify(x,null,2); };
+
+  function refresh(){
+    pminLbl.textContent = fmt(pminEl.value);
+    nperLbl.textContent = parseInt(nperEl.value,10);
+    probLbl.textContent = pct(probEl.value);
+    muLbl.textContent   = pct(muEl.value);
+    volLbl.textContent  = pct(volEl.value);
+    convLbl.textContent = pct(convEl.value);
+  } refresh();
+
+  // Chart, identical behaviour to add4
+  const COLORS=["#000","#9e9e9e","#1976d2","#ff9800","#7b1fa2","#2e7d32","#c2185b","#455a64","#f57c00","#512da8"];
+  const ctx=document.getElementById("line").getContext("2d");
+  const line=new Chart(ctx,{type:"line",data:{labels:[],datasets:[]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      scales:{ x:{title:{display:true,text:"T"}}, y:{beginAtZero:true,title:{display:true,text:"Value"},ticks:{callback:v=>fmt(v)}}},
+      elements:{point:{radius:2}}, plugins:{legend:{display:false}}
+    }});
+
+  function drawPaths(t, paths){
+    line.data.labels=t.map(String);
+    line.data.datasets=paths.map((row,i)=>({
+      label:"path"+(i+1), data:row,
+      borderColor:COLORS[i%COLORS.length], backgroundColor:COLORS[i%COLORS.length],
+      tension:0.15, fill:false
+    }));
+    line.update();
+  }
+
+  function renderTerminalRows(terminalWealth, convRate){
+    // Row 1: final wealth per sample path
+    const rW = $("add2RowWealth");
+    rW.querySelectorAll("td").forEach(td=>td.remove());
+    terminalWealth.forEach(v=>{
+      const td=document.createElement("td");
+      td.textContent = fmt(v);
+      rW.appendChild(td);
+    });
+
+    // Row 2: pension = conv * final wealth
+    const rP = $("add2RowPension");
+    rP.querySelectorAll("td").forEach(td=>td.remove());
+    terminalWealth.forEach(v=>{
+      const td=document.createElement("td");
+      td.textContent = fmt(convRate * v);
+      rP.appendChild(td);
+    });
+  }
+
+  // WebR bootstrap (same pattern as add4)
+  import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
+  const webr=new WebR();
+
+  // helpers to read WebR list/matrix structures
+  const getListElem=(obj,name)=>{
+    if (!obj) return undefined;
+    if (obj[name]!==undefined) return obj[name];
+    if (Array.isArray(obj.names)&&Array.isArray(obj.values)){
+      const k=obj.names.indexOf(name); if(k>=0) return obj.values[k];
+    }
+    return undefined;
+  };
+  const vec=x=>{
+    if (!x) return [];
+    if (Array.isArray(x)) return x.map(Number);
+    if (typeof x==="object" && Array.isArray(x.values)) return x.values.map(Number);
+    if (typeof x==="number") return [x];
+    return [];
+  };
+
+  async function init(){
+    await webr.init();
+    const code=await (await fetch("./r/uadd2.R")).text();
+    await webr.evalR(code);
+  }
+
+  async function compute(){
+    try{
+      refresh();
+      const pmin = +pminEl.value,
+            nper = parseInt(nperEl.value,10),
+            prob = +probEl.value,
+            mu   = +muEl.value,
+            vol  = +volEl.value,
+            conv = +convEl.value;
+
+      const r = await webr.evalR(`
+        out <- uadd2(
+          pension_min=${pmin}, nper=${nper}, mu_real=${mu}, vol_real=${vol},
+          conv=${conv}, prob_ok=${prob},
+          n_scen=10000, n_show=10,
+          seed=${seedVal!==null?seedVal:"NULL"}
+        ); out
+      `);
+
+      const root=await r.toJs();
+      const results=getListElem(root,"results") || root.results;
+
+      // KPI-Badge: required yearly savings
+      const pmtO = getListElem(results,"pmt_required");
+      const pmtV = Array.isArray(pmtO) ? Number(pmtO[0]) :
+                   (pmtO && pmtO.values ? Number(pmtO.values[0]) : Number(pmtO));
+      $("savingsBadge").textContent = fmt(pmtV, {maximumFractionDigits:2});
+
+      // Paths (wealth over time), build array of arrays; R is column-major
+      const tArr  = vec(getListElem(results,"t"));
+      const pathsO= getListElem(results,"paths");
+      const flat  = vec(pathsO);
+
+      let nrow=0, ncol=0;
+      if (pathsO && pathsO.dim){ const d=vec(pathsO.dim); if(d.length===2){ nrow=d[0]; ncol=d[1]; } }
+      if ((!nrow||!ncol) && tArr.length>0 && flat.length%tArr.length===0){ ncol=tArr.length; nrow=flat.length/ncol; }
+
+      const paths=[];
+      if (nrow>0 && ncol>0 && flat.length===nrow*ncol){
+        for(let r=0;r<nrow;r++){
+          const row=[]; for(let c=0;c<ncol;c++){ row.push( flat[r + c*nrow] ); }
+          paths.push(row);
+        }
+      }
+      drawPaths(tArr, paths);
+
+      // Terminal wealth per path = last element of each row
+      const terminal = paths.map(row => row[row.length-1] || 0);
+      renderTerminalRows(terminal, conv);
+
+      if (debug) log({pmt_required:pmtV, tLen:tArr.length, nPaths:paths.length, terminal});
+    }catch(e){
+      log("Compute error: "+(e?.message||e));
+    }
+  }
+
+  document.getElementById("compute").addEventListener("click", compute);
+  [pminEl,nperEl,probEl,muEl,volEl,convEl].forEach(el=>el.addEventListener("input", compute));
+  await init(); await compute();
+</script>
+</body>
+</html>
