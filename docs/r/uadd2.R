@@ -1,12 +1,12 @@
 # add2: Real yearly savings required to reach a minimum desired (real)
 #       yearly pension with probability p
-# End-of-year contributions, identisch zum Modell in uadd1/uadd4:
-#   G_t = exp(m + vol_real * Z_t),  Z_t ~ N(0,1),  m = log(1+mu_real) - 0.5*vol_real^2
-#   W_t = W_{t-1} * G_t + pmt_real,  W_0 = 0
-# => W_T = pmt_real * H,  H = C_T * S_T
-#    C_t = ∏_{k=1..t} G_k,  S_t = ∑_{k=1..t} 1/C_k
-# Ziel: P(conv * W_T >= pension_min) >= prob_ok
-# <=> pmt_real >= (pension_min/conv) / Q_{1-prob_ok}(H)
+# Modell (wie uadd1/uadd4):
+#   End-of-year Beiträge (real): W_t = W_{t-1} * G_t + pmt_real, W_0=0
+#   G_t = exp(m + vol_real * Z_t), Z_t ~ N(0,1), m = log(1+mu_real) - 0.5*vol_real^2
+#   => W_T = pmt_real * H,  H = C_T * S_T,
+#      C_t = prod_{k=1..t} G_k,  S_t = sum_{k=1..t} 1/C_k
+# Zielbedingung: P(conv * W_T >= pension_min) >= prob_ok
+#   <=> pmt_real >= (pension_min/conv) / Q_{1-prob_ok}(H)
 
 uadd2 <- function(pension_min, nper, mu_real, vol_real, conv, prob_ok,
                   n_scen = 10000L, n_show = 10L, seed = NULL) {
@@ -18,20 +18,20 @@ uadd2 <- function(pension_min, nper, mu_real, vol_real, conv, prob_ok,
   nper    <- as.integer(nper)
   prob_ok <- min(max(as.numeric(prob_ok), 0), 1)
   
-  # Lognormal mit E[G]=1+mu_real
+  # lognormal mit E[G]=1+mu_real
   m <- log1p(mu_real) - 0.5 * vol_real^2
   Z <- matrix(rnorm(n_scen * nper), nrow = n_scen, ncol = nper)
   G <- exp(m + vol_real * Z)
   
-  # C und S
+  # kumulative Produkte/Summen
   C <- matrix(0.0, nrow = n_scen, ncol = nper)
   S <- matrix(0.0, nrow = n_scen, ncol = nper)
-  C[,1] <- G[,1]
-  S[,1] <- 1 / C[,1]
+  C[, 1] <- G[, 1]
+  S[, 1] <- 1 / C[, 1]
   if (nper >= 2L) {
     for (t in 2:nper) {
-      C[,t] <- C[,t-1] * G[,t]
-      S[,t] <- S[,t-1] + 1 / C[,t]
+      C[, t] <- C[, t - 1] * G[, t]
+      S[, t] <- S[, t - 1] + 1 / C[, t]
     }
   }
   
@@ -41,7 +41,7 @@ uadd2 <- function(pension_min, nper, mu_real, vol_real, conv, prob_ok,
   qH <- as.numeric(stats::quantile(H, probs = 1 - prob_ok, names = FALSE, type = 7, na.rm = TRUE))
   pmt_req <- if (is.finite(qH) && qH > 0) W_star / qH else Inf
   
-  # Beispielpfade für Plot: W_t = pmt_req * C_t * S_t
+  # Beispielpfade (Wealth) bei pmt_req
   show_idx <- seq_len(min(n_show, n_scen))
   C_show <- C[show_idx, , drop = FALSE]
   S_show <- S[show_idx, , drop = FALSE]
@@ -60,7 +60,7 @@ uadd2 <- function(pension_min, nper, mu_real, vol_real, conv, prob_ok,
     results = list(
       t = 1:nper,
       pmt_required = pmt_req,
-      paths = W_show,         # n_show × nper (Wealth-Pfade bis Rente)
+      paths = W_show,         # n_show × nper (Wealth-Pfade)
       H_quantiles = qH_vec,   # 10%..90% (Diagnostik)
       probs = probs
     )

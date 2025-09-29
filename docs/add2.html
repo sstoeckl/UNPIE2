@@ -13,9 +13,8 @@
   body{overflow:hidden;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#fff;color:#111}
   .app{height:640px;display:grid;place-items:stretch}
   .wrap{max-width:1150px;margin:0 auto;padding:8px 12px;height:100%;box-sizing:border-box}
-  .title{text-align:center;margin:4px 0 6px;font-size:1.15rem}
-  .subtitle{text-align:center;margin-bottom:6px;color:#666}
-  .grid{display:grid;grid-template-columns:340px 1fr;gap:12px;height:calc(100% - 52px)}
+  .title{text-align:center;margin:4px 0 8px;font-size:1.15rem}
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:12px;height:calc(100% - 38px)}
   @media (max-width:900px){.grid{grid-template-columns:1fr}}
   .panel{border:1px solid #e8e8e8;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);background:#fff}
   .left{padding:10px;overflow:auto}
@@ -27,15 +26,12 @@
   input[type=range]{width:100%}
   button{padding:.55rem .9rem;border:0;border-radius:10px;background:#eee;cursor:pointer}
   .right{padding:10px;display:flex;flex-direction:column;height:100%;overflow:hidden}
-  .badge{display:inline-block;background:#f7f7f9;border-radius:10px;padding:.45rem .7rem;margin-left:.5rem;font-variant-numeric:tabular-nums}
-  .chartWrap{flex:1 0 auto;height:360px}
+  .chartWrap{flex:1 0 auto;height:380px}
   #line{width:100%;height:100%}
-  .kpi{margin-top:6px;text-align:center}
-  .kpiTable { border-collapse: separate; border-spacing: 6px; margin: 0 auto; }
-  .kpiTable th, .kpiTable td {
-    background:#f7f7f9; padding:.45rem .6rem; border-radius:8px;
-    font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap;
-  }
+  .kpi{margin-top:8px;text-align:center}
+  .kpi table{border-collapse:separate;border-spacing:6px;margin:0 auto}
+  .kpi th{background:#ebedf0;color:#333;padding:.35rem .6rem;border-radius:8px}
+  .kpi td{background:#f7f7f9;padding:.35rem .6rem;border-radius:8px;font-variant-numeric:tabular-nums}
   .kpiTable th.label { background:#ebedf0; color:#333; text-align:left; }
   .debug{margin-top:6px;background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;flex:0 0 110px;display:none}
   pre{margin:0;font-size:.82rem}
@@ -45,28 +41,24 @@
 <div class="app">
   <div class="wrap">
     <div class="title" id="title">App 11: Real yearly savings required to reach minimum desired (real) yearly pension with probability p</div>
-    <div class="subtitle">
-      <span id="subtitleText">Required (real) yearly savings</span>
-      <span class="badge" id="savingsBadge">—</span>
-    </div>
 
     <div class="grid">
       <!-- Controls (links) -->
       <div class="panel left">
         <div class="group">
-          <h3 id="gPension">Retirement target (real, yearly)</h3>
+          <h3 id="gPension">Minimum (real) yearly pension</h3>
           <div class="row">
-            <label for="pmin" style="flex:1" id="lPension">Minimum pension</label>
+            <label for="pmin" style="flex:1" id="lPension">Pension per year</label>
             <input id="pmin" type="range" min="3000" max="60000" step="250" value="12000">
             <div class="val" id="pminLabel">12,000</div>
           </div>
         </div>
 
         <div class="group">
-          <h3 id="gNper">Years to retirement</h3>
+          <h3 id="gHor">Time horizon (years to retirement)</h3>
           <div class="row">
-            <label for="nper" style="flex:1" id="lNper">Years</label>
-            <input id="nper" type="range" min="5" max="45" step="1" value="35">
+            <label for="nper" style="flex:1" id="lYears">Years</label>
+            <input id="nper" type="range" min="1" max="50" step="1" value="35">
             <div class="val" id="nperLabel">35</div>
           </div>
         </div>
@@ -75,7 +67,7 @@
           <h3 id="gProb">Probability to reach target</h3>
           <div class="row">
             <label for="prob" style="flex:1" id="lProb">Probability</label>
-            <input id="prob" type="range" min="0.5" max="0.99" step="0.005" value="0.80">
+            <input id="prob" type="range" min="0.50" max="0.99" step="0.005" value="0.80">
             <div class="val" id="probLabel">80.00%</div>
           </div>
         </div>
@@ -114,14 +106,15 @@
       <div class="panel right">
         <div class="chartWrap"><canvas id="line"></canvas></div>
 
-        <!-- KPI-Tabelle (Diagnostik): H-Quantile -->
         <div class="kpi">
           <table class="kpiTable" id="kpiTableAdd2">
-            <tr id="add2RowHeader">
-              <th class="label" id="kHdr">Quantiles of H = C_T × S_T (10–90%):</th>
+            <tr id="add2RowReq">
+              <th class="label" id="kReq">Required (real) yearly savings:</th>
+              <!-- one cell inserted by JS -->
             </tr>
-            <tr id="add2RowVals">
-              <th class="label" id="kVals">Values:</th>
+            <tr id="add2RowH">
+              <th class="label" id="kH">Quantiles of H = C_T × S_T (10–90%):</th>
+              <!-- 9 cells inserted by JS -->
             </tr>
           </table>
         </div>
@@ -133,77 +126,58 @@
 </div>
 
 <script type="module">
-  // URL-Params (+ seed)
+  // URL params (inkl. seed wie add1/add3)
   const params = new URLSearchParams(location.search);
   const lang   = (params.get("lang")  || "en_EN").toLowerCase();
   const debug  = (params.get("debug") || "FALSE").toUpperCase() === "TRUE";
   const seedQS = params.get("seed");
   const seedVal = seedQS ? parseInt(seedQS,10) : null;
 
-  // i18n (analog add4.html)
+  // i18n (gleiche Struktur wie add1/add3)
   const I18N={
     en_en:{
       title:"App 11: Real yearly savings required to reach minimum desired (real) yearly pension with probability p",
-      subtitle:"Required (real) yearly savings",
-      gPension:"Retirement target (real, yearly)", lPension:"Minimum pension",
-      gNper:"Years to retirement", lNper:"Years",
+      gPension:"Minimum (real) yearly pension", lPension:"Pension per year",
+      gHor:"Time horizon (years to retirement)", lYears:"Years",
       gProb:"Probability to reach target", lProb:"Probability",
       gRet:"Expected (real) return", lMu:"Expected return",
       gVol:"Volatility of expected (real) return", lVol:"Volatility",
       gConv:"Conversion rate at retirement", lConv:"Conversion rate",
       btn:"Recalculate",
-      kHdr:"Quantiles of H = C_T × S_T (10–90%):",
-      kVals:"Values:"
+      kReq:"Required (real) yearly savings:",
+      kH:"Quantiles of H = C_T × S_T (10–90%):"
     },
     de_de:{
       title:"App 11: Benötigte reale Jahresersparnis für eine minimale gewünschte reale Jahrespension mit Wahrscheinlichkeit p",
-      subtitle:"Benötigte (reale) Jahresersparnis",
-      gPension:"Renten-Ziel (real, jährlich)", lPension:"Mindestpension",
-      gNper:"Jahre bis zur Pension", lNper:"Jahre",
+      gPension:"Minimale (reale) Jahrespension", lPension:"Jahrespension",
+      gHor:"Zeithorizont (Jahre bis Pension)", lYears:"Jahre",
       gProb:"Wahrscheinlichkeit zur Zielerreichung", lProb:"Wahrscheinlichkeit",
       gRet:"Erwartete (reale) Rendite", lMu:"Erwartete Rendite",
       gVol:"Volatilität der erwarteten (realen) Rendite", lVol:"Volatilität",
       gConv:"Umwandlungssatz bei Pensionseintritt", lConv:"Umwandlungssatz",
       btn:"Neu berechnen",
-      kHdr:"Quantile von H = C_T × S_T (10–90%):",
-      kVals:"Werte:"
+      kReq:"Benötigte (reale) Jahresersparnis:",
+      kH:"Quantile von H = C_T × S_T (10–90%):"
     }
   };
   const T = I18N[lang] || I18N.en_en;
+  ["title","gPension","lPension","gHor","lYears","gProb","lProb","gRet","lMu","gVol","lVol","gConv","lConv","kReq","kH"]
+    .forEach(id=>document.getElementById(id).textContent=T[id]);
+  document.getElementById("compute").textContent = T.btn;
+  document.getElementById("debugBox").style.display = debug ? "block" : "none";
 
-  // Texte setzen (wie add4)
-  const ids = ["title","gPension","lPension","gNper","lNper","gProb","lProb","gRet","lMu","gVol","lVol","gConv","lConv","kHdr","kVals"];
-  ids.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = T[id]; });
-  const subt = document.getElementById("subtitleText"); if (subt) subt.textContent = T.subtitle;
-  const btn  = document.getElementById("compute"); if (btn) btn.textContent = T.btn;
-  const debugBox = document.getElementById("debugBox"); if (debugBox) debugBox.style.display = debug ? "block" : "none";
+  // UI binds
+  const $=id=>document.getElementById(id);
+  const pminEl=$("pmin"), nperEl=$("nper"), probEl=$("prob"), muEl=$("mu"), volEl=$("vol"), convEl=$("conv");
+  const pminLbl=$("pminLabel"), nperLbl=$("nperLabel"), probLbl=$("probLabel"), muLbl=$("muLabel"), volLbl=$("volLabel"), convLbl=$("convLabel");
+  const dbg=$("debug");
 
-  const $ = id => document.getElementById(id);
-
-  // UI Bindings
-  const pminEl = $("pmin");
-  const nperEl = $("nper");
-  const probEl = $("prob");
-  const muEl   = $("mu");
-  const volEl  = $("vol");
-  const convEl = $("conv");
-
-  const pminLbl = $("pminLabel");
-  const nperLbl = $("nperLabel");
-  const probLbl = $("probLabel");
-  const muLbl   = $("muLabel");
-  const volLbl  = $("volLabel");
-  const convLbl = $("convLabel");
-
-  const badge = $("savingsBadge");
-  const dbgEl = $("debug");
-
-  const fmt = (x,opts={}) => Number(x).toLocaleString(undefined,{maximumFractionDigits:0,...opts});
-  const pct = x => (parseFloat(x)*100).toFixed(2)+"%";
-  const log = x => { if (debug) dbgEl.textContent = typeof x==="string" ? x : JSON.stringify(x,null,2); };
+  const fmt=(x,opts={})=>Number(x).toLocaleString(undefined,{maximumFractionDigits:0,...opts});
+  const pct=x=>(parseFloat(x)*100).toFixed(2)+"%";
+  const log=x=>{ if(debug) dbg.textContent = typeof x==="string" ? x : JSON.stringify(x,null,2); };
 
   function refresh(){
-    pminLbl.textContent = fmt(pminEl.value, {maximumFractionDigits:0});
+    pminLbl.textContent = fmt(pminEl.value,{maximumFractionDigits:0});
     nperLbl.textContent = parseInt(nperEl.value,10);
     probLbl.textContent = pct(probEl.value);
     muLbl.textContent   = pct(muEl.value);
@@ -211,41 +185,51 @@
     convLbl.textContent = pct(convEl.value);
   } refresh();
 
-  // Chart (wie add4)
+  // Chart (wie add1/add3)
   const COLORS=["#000","#9e9e9e","#1976d2","#ff9800","#7b1fa2","#2e7d32","#c2185b","#455a64","#f57c00","#512da8"];
   const ctx=document.getElementById("line").getContext("2d");
   const line=new Chart(ctx,{type:"line",data:{labels:[],datasets:[]},
     options:{
       responsive:true,maintainAspectRatio:false,
-      scales:{ x:{title:{display:true,text:"Years to retirement (t)"}}, y:{beginAtZero:true,title:{display:true,text:"Wealth"},ticks:{callback:v=>fmt(v)}}},
+      scales:{ x:{title:{display:true,text:"T"}}, y:{beginAtZero:true,title:{display:true,text:"Value"},ticks:{callback:v=>fmt(v)}} },
       elements:{point:{radius:2}}, plugins:{legend:{display:false}}
     }});
 
   function drawPaths(t, paths){
-    line.data.labels=t.map(String);
-    line.data.datasets=paths.map((row,i)=>({
-      label:"path"+(i+1), data:row,
-      borderColor:COLORS[i%COLORS.length], backgroundColor:COLORS[i%COLORS.length],
+    line.data.labels = t.map(String);
+    line.data.datasets = paths.map((row,i)=>({
+      label:"path"+(i+1),
+      data:row,
+      borderColor:COLORS[i%COLORS.length],
+      backgroundColor:COLORS[i%COLORS.length],
       tension:0.15, fill:false
     }));
     line.update();
   }
 
-  function renderKpiTableAdd2(qvals){
-    const hdr = $("add2RowHeader");
-    const vls = $("add2RowVals");
-    hdr.querySelectorAll("td").forEach(td=>td.remove());
-    vls.querySelectorAll("td").forEach(td=>td.remove());
-    const probs = ["10%","20%","30%","40%","50%","60%","70%","80%","90%"];
-    probs.forEach(p=>{ const td=document.createElement("td"); td.textContent=p; hdr.appendChild(td); });
-    (qvals||[]).forEach(v=>{ const td=document.createElement("td"); td.textContent=fmt(v,{maximumFractionDigits:0}); vls.appendChild(td); });
+  // KPI-Tabellenrender
+  function renderReqPmt(val){
+    const row = document.getElementById("add2RowReq");
+    row.querySelectorAll("td").forEach(td=>td.remove());
+    const td=document.createElement("td");
+    td.textContent = fmt(val,{maximumFractionDigits:0});
+    row.appendChild(td);
+  }
+  function renderQuantilesH(qvals){
+    const row = document.getElementById("add2RowH");
+    row.querySelectorAll("td").forEach(td=>td.remove());
+    (qvals||[]).forEach(v=>{
+      const td=document.createElement("td");
+      td.textContent = fmt(v,{maximumFractionDigits:0});
+      row.appendChild(td);
+    });
   }
 
-  // WebR
+  // WebR (wie add1/add3)
   import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
   const webr=new WebR();
 
-  // Helper wie in add4
+  // helpers um R-Listen robust auszulesen (wie add1/add3)
   const getListElem=(obj,name)=>{
     if (!obj) return undefined;
     if (obj[name]!==undefined) return obj[name];
@@ -272,20 +256,59 @@
     try{
       refresh();
       const pmin = +pminEl.value,
-            nper = parseInt(nperEl.value,10),
+            n    = parseInt(nperEl.value,10),
             pr   = +probEl.value,
             mu   = +muEl.value,
-            sg   = +volEl.value,
+            s    = +volEl.value,
             cv   = +convEl.value;
 
       const r = await webr.evalR(`
         out <- uadd2(
-          pension_min=${pmin}, nper=${nper}, prob_ok=${pr},
-          mu_real=${mu}, vol_real=${sg}, conv=${cv},
+          pension_min=${pmin}, nper=${n}, mu_real=${mu}, vol_real=${s},
+          conv=${cv}, prob_ok=${pr},
           n_scen=10000, n_show=10,
           seed=${seedVal!==null?seedVal:"NULL"}
         ); out
       `);
 
       const root=await r.toJs();
-      :contentReference[oaicite:1]{index=1}
+      const results=getListElem(root,"results") || root.results;
+
+      // Required pmt
+      const pmtO = getListElem(results,"pmt_required");
+      const pmtV = Array.isArray(pmtO) ? Number(pmtO[0]) :
+                   (pmtO && pmtO.values ? Number(pmtO.values[0]) : Number(pmtO));
+      renderReqPmt(pmtV);
+
+      // H-Quantile
+      const qH = vec(getListElem(results,"H_quantiles"));
+      renderQuantilesH(qH);
+
+      // Pfade aufbauen (R column-major)
+      const tArr = vec(getListElem(results,"t"));
+      const pathsO = getListElem(results,"paths");
+      const flat = vec(pathsO);
+      let nrow=0, ncol=0;
+      if (pathsO && pathsO.dim){ const d=vec(pathsO.dim); if(d.length===2){ nrow=d[0]; ncol=d[1]; } }
+      if ((!nrow||!ncol) && tArr.length>0 && flat.length%tArr.length===0){ ncol=tArr.length; nrow=flat.length/ncol; }
+      const paths=[];
+      if (nrow>0 && ncol>0 && flat.length===nrow*ncol){
+        for(let r=0;r<nrow;r++){
+          const row=[]; for(let c=0;c<ncol;c++){ row.push( flat[r + c*nrow] ); }
+          paths.push(row);
+        }
+      }
+      drawPaths(tArr, paths);
+
+      if (debug) log({pmt_required:pmtV, tLen:tArr.length, nPaths:paths.length, rowLen:paths[0]?.length||0, qH});
+    }catch(e){
+      log("Compute error: "+(e?.message||e));
+    }
+  }
+
+  document.getElementById("compute").addEventListener("click", compute);
+  [pminEl,nperEl,probEl,muEl,volEl,convEl].forEach(el=>el.addEventListener("input", compute));
+  await init(); await compute();
+</script>
+</body>
+</html>
