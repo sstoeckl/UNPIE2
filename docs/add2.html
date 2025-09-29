@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>UNPIE2 – Add 2</title>
 
-<!-- libs -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script type="module" src="https://webr.r-wasm.org/latest/webr.mjs"></script>
 
@@ -13,7 +12,7 @@
   html,body{height:100%;margin:0}
   body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#fff;color:#111}
 
-  /* ============ OUTER SHELL (like case16n) ============ */
+  /* ===== outer shell (like case16n) ===== */
   .app-shell{
     max-width: 1120px;
     width: min(1120px, calc(100% - 16px));
@@ -35,9 +34,8 @@
     white-space: nowrap;
   }
 
-  /* ============ INNER APP (like add4) ============ */
-  .app{ height:auto; min-height:0; display:grid; place-items:stretch }
-  .wrap{ max-width:100%; margin:0; padding:8px 12px; height:100%; box-sizing:border-box }
+  /* ===== inner app (like add4) ===== */
+  .wrap{ padding:8px 12px }
   .title{text-align:center;margin:4px 0 6px;font-size:1.15rem}
   .subtitle{text-align:center;margin-bottom:6px;color:#666}
   .badge{display:inline-block;background:#f7f7f9;border-radius:10px;padding:.45rem .7rem;margin-left:.5rem;font-variant-numeric:tabular-nums}
@@ -46,7 +44,7 @@
   @media (max-width:900px){.grid{grid-template-columns:1fr}}
   .panel{border:1px solid #e8e8e8;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);background:#fff}
   .left{padding:10px;overflow:auto}
-  .right{padding:10px;display:flex;flex-direction:column;height:100%;gap:10px;min-width:0}
+  .right{padding:10px;display:flex;flex-direction:column;gap:10px;min-width:0}
 
   .group{border:1px solid #ddd;border-radius:10px;padding:10px;margin-bottom:10px}
   .group h3{margin:0 0 8px;font-size:1rem}
@@ -56,143 +54,106 @@
   input[type=range]{width:100%}
   button{padding:.55rem .9rem;border:0;border-radius:10px;background:#eee;cursor:pointer}
 
-  .chartWrap{flex:1 0 auto;height:380px}
+  .chartWrap{height:380px}
   #line{width:100%;height:100%}
 
-  /* ============ Responsive KPI rows (wrap, no overflow) ============ */
-  .kpi { margin-top: 6px; }
-  .kpiRow {
-    display: grid;
-    grid-template-columns: auto 1fr;
-    align-items: start;
-    gap: 8px;
-    margin-bottom: 8px;
+  /* ===== “real table” that wraps in two-row blocks ===== */
+  .kpiBlock{ width:100% }
+  .kpiTable{ width:100%; border-collapse:separate; border-spacing:6px; table-layout:auto }
+  .labelPill{
+    background:#ebedf0; color:#333;
+    padding:.32rem .48rem; border-radius:8px; white-space:nowrap;
+    font-size:12px; text-align:left;
   }
-  .labelPill {
-    background: #ebedf0;
-    color: #333;
-    padding: .45rem .6rem;
-    border-radius: 8px;
-    white-space: nowrap;
-  }
-  /* was: grid with minmax(...) making wide columns */
-  .kpiGrid{
-    display:flex;          /* flex wraps naturally */
-    flex-wrap:wrap;
-    gap:6px;
-    align-items:center;
-    min-width:0;
-  }
-  .kpiCell{
-    display:inline-flex;   /* size = content + padding */
-    align-items:center;
-    justify-content:center;/* no leading blank */
-    background:#f7f7f9;
-    padding:.22rem .34rem; /* compact */
-    border-radius:8px;
-    font-variant-numeric:tabular-nums;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
+  .cellPill{
+    background:#f7f7f9; padding:.28rem .40rem; border-radius:8px;
+    text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap;
     font-size:12px;
-    flex:0 0 auto;         /* do not grow */
   }
-  @media (max-width: 520px){
-    .kpiRow { grid-template-columns: 1fr; }
-  }
-
-  /* Debug box */
+  /* Debug */
   .debug{background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;display:none}
   pre{margin:0;font-size:.82rem}
 </style>
 </head>
 <body>
 <div class="app-shell">
-  <div class="app">
-    <div class="wrap">
-      <div class="title" id="title">App 11: Real yearly savings required to reach minimum desired (real) yearly pension with probability p</div>
-      <div class="subtitle">
-        <span id="subtitleText">Required yearly savings (real)</span>
-        <span class="badge" id="savingsBadge">—</span>
+  <div class="wrap">
+    <div class="title">App 11: Real yearly savings required to reach minimum desired (real) yearly pension with probability p</div>
+    <div class="subtitle">
+      <span>Required yearly savings (real)</span>
+      <span class="badge" id="savingsBadge">—</span>
+    </div>
+
+    <div class="grid">
+      <!-- LEFT controls -->
+      <div class="panel left">
+        <div class="group">
+          <h3>Minimum desired yearly pension (real)</h3>
+          <div class="row">
+            <label for="pmin" style="flex:1">Pension per year</label>
+            <input id="pmin" type="range" min="300" max="60000" step="50" value="1000">
+            <div class="val" id="pminLabel">1,000</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3>Time horizon (years to retirement)</h3>
+          <div class="row">
+            <label for="nper" style="flex:1">Years</label>
+            <input id="nper" type="range" min="5" max="45" step="1" value="35">
+            <div class="val" id="nperLabel">35</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3>Probability to reach minimum desired yearly pension (real)</h3>
+          <div class="row">
+            <label for="prob" style="flex:1">Probability</label>
+            <input id="prob" type="range" min="0.50" max="0.99" step="0.005" value="0.80">
+            <div class="val" id="probLabel">80.00%</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3>Expected (real) return</h3>
+          <div class="row">
+            <label for="mu" style="flex:1">Expected return</label>
+            <input id="mu" type="range" min="0" max="0.10" step="0.0005" value="0.03">
+            <div class="val" id="muLabel">3.00%</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3>Volatility of expected (real) return</h3>
+          <div class="row">
+            <label for="vol" style="flex:1">Volatility</label>
+            <input id="vol" type="range" min="0" max="0.30" step="0.0005" value="0.08">
+            <div class="val" id="volLabel">8.00%</div>
+          </div>
+        </div>
+
+        <div class="group">
+          <h3>Conversion rate</h3>
+          <div class="row">
+            <label for="conv" style="flex:1">Rate</label>
+            <input id="conv" type="range" min="0.02" max="0.08" step="0.0005" value="0.05">
+            <div class="val" id="convLabel">5.00%</div>
+          </div>
+        </div>
+
+        <button id="compute">Recalculate</button>
       </div>
 
-      <div class="grid">
-        <!-- LEFT: Controls -->
-        <div class="panel left">
-          <div class="group">
-            <h3>Minimum desired yearly pension (real)</h3>
-            <div class="row">
-              <label for="pmin" style="flex:1">Pension per year</label>
-              <input id="pmin" type="range" min="300" max="60000" step="50" value="1000">
-              <div class="val" id="pminLabel">1,000</div>
-            </div>
-          </div>
+      <!-- RIGHT chart + table + debug -->
+      <div class="panel right">
+        <div class="chartWrap"><canvas id="line"></canvas></div>
 
-          <div class="group">
-            <h3>Time horizon (years to retirement)</h3>
-            <div class="row">
-              <label for="nper" style="flex:1">Years</label>
-              <input id="nper" type="range" min="5" max="45" step="1" value="35">
-              <div class="val" id="nperLabel">35</div>
-            </div>
-          </div>
-
-          <div class="group">
-            <h3>Probability to reach minimum desired yearly pension (real)</h3>
-            <div class="row">
-              <label for="prob" style="flex:1">Probability</label>
-              <input id="prob" type="range" min="0.50" max="0.99" step="0.005" value="0.80">
-              <div class="val" id="probLabel">80.00%</div>
-            </div>
-          </div>
-
-          <div class="group">
-            <h3>Expected (real) return</h3>
-            <div class="row">
-              <label for="mu" style="flex:1">Expected return</label>
-              <input id="mu" type="range" min="0" max="0.10" step="0.0005" value="0.03">
-              <div class="val" id="muLabel">3.00%</div>
-            </div>
-          </div>
-
-          <div class="group">
-            <h3>Volatility of expected (real) return</h3>
-            <div class="row">
-              <label for="vol" style="flex:1">Volatility</label>
-              <input id="vol" type="range" min="0" max="0.30" step="0.0005" value="0.08">
-              <div class="val" id="volLabel">8.00%</div>
-            </div>
-          </div>
-
-          <div class="group">
-            <h3>Conversion rate</h3>
-            <div class="row">
-              <label for="conv" style="flex:1">Rate</label>
-              <input id="conv" type="range" min="0.02" max="0.08" step="0.0005" value="0.05">
-              <div class="val" id="convLabel">5.00%</div>
-            </div>
-          </div>
-
-          <button id="compute">Recalculate</button>
+        <!-- WRAPPING TABLE -->
+        <div class="kpiBlock" id="kpiTableWrap">
+          <table class="kpiTable" id="kpiTable"><tbody id="kpiBody"></tbody></table>
         </div>
 
-        <!-- RIGHT: Chart + KPI + Debug -->
-        <div class="panel right">
-          <div class="chartWrap"><canvas id="line"></canvas></div>
-
-          <div class="kpi">
-            <div class="kpiRow">
-              <div class="labelPill" id="kWealthHdr">Future value of savings (real):</div>
-              <div class="kpiGrid" id="wealthGrid"></div>
-            </div>
-            <div class="kpiRow">
-              <div class="labelPill" id="kPensHdr">Lifelong pension (real):</div>
-              <div class="kpiGrid" id="pensGrid"></div>
-            </div>
-          </div>
-
-          <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
-        </div>
+        <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
       </div>
     </div>
   </div>
@@ -200,25 +161,23 @@
 </div>
 
 <script type="module">
-  // URL params (+ seed)
-  const params = new URLSearchParams(location.search);
-  const debug  = (params.get("debug") || "FALSE").toUpperCase() === "TRUE";
-  const seedQS = params.get("seed");
+  // URL params
+  const params  = new URLSearchParams(location.search);
+  const debug   = (params.get("debug") || "FALSE").toUpperCase() === "TRUE";
+  const seedQS  = params.get("seed");
   const seedVal = seedQS ? parseInt(seedQS,10) : null;
 
   const $ = id => document.getElementById(id);
 
-  // UI elements
+  // Controls
   const pminEl=$("pmin"), nperEl=$("nper"), probEl=$("prob"),
         muEl=$("mu"), volEl=$("vol"), convEl=$("conv");
-
   const pminLbl=$("pminLabel"), nperLbl=$("nperLabel"), probLbl=$("probLabel"),
         muLbl=$("muLabel"), volLbl=$("volLabel"), convLbl=$("convLabel");
 
   const badge = $("savingsBadge");
-  const dbgEl = $("debug");
-  const debugBox = $("debugBox");
-  if (debug) debugBox.style.display = "block";
+  const dbgEl = $("debug"); const debugBox = $("debugBox");
+  if (debug) debugBox.style.display="block";
 
   const fmt = (x,opts={}) => Number(x).toLocaleString(undefined,{maximumFractionDigits:0,...opts});
   const pct = x => (parseFloat(x)*100).toFixed(2)+"%";
@@ -237,45 +196,75 @@
   const COLORS=["#000","#9e9e9e","#1976d2","#ff9800","#7b1fa2","#2e7d32","#c2185b","#455a64","#f57c00","#512da8"];
   const ctx=document.getElementById("line").getContext("2d");
   const line=new Chart(ctx,{type:"line",data:{labels:[],datasets:[]},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      scales:{ x:{title:{display:true,text:"T"}}, y:{beginAtZero:true,title:{display:true,text:"Value"},ticks:{callback:v=>fmt(v)}}},
-      elements:{point:{radius:2}}, plugins:{legend:{display:false}}
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{x:{title:{display:true,text:"T"}},y:{beginAtZero:true,title:{display:true,text:"Value"},ticks:{callback:v=>fmt(v)}}},
+      elements:{point:{radius:2}},plugins:{legend:{display:false}}
     }});
-
   function drawPaths(t, paths){
     line.data.labels=t.map(String);
-    line.data.datasets=paths.map((row,i)=>({
-      label:"path"+(i+1), data:row,
-      borderColor:COLORS[i%COLORS.length], backgroundColor:COLORS[i%COLORS.length],
-      tension:0.15, fill:false
-    }));
+    line.data.datasets=paths.map((row,i)=>({label:"path"+(i+1),data:row,borderColor:COLORS[i%COLORS.length],backgroundColor:COLORS[i%COLORS.length],tension:0.15,fill:false}));
     line.update();
   }
 
-  function renderTerminalRows(terminalWealth, convRate) {
-    const wg = document.getElementById("wealthGrid");
-    const pg = document.getElementById("pensGrid");
-    wg.innerHTML = "";
-    pg.innerHTML = "";
-    terminalWealth.forEach(v => {
-      const w = document.createElement("div");
-      w.className = "kpiCell";
-      w.textContent = fmt(v);
-      wg.appendChild(w);
+  // ===== REAL TABLE RENDERING (wraps into blocks) =====
+  const CELL_MIN = 80;  // target min cell width
+  const CELL_GAP = 12;  // approx table spacing (6px left + 6px right)
+  const LABEL_EST = 180; // estimated width of left label pill
 
-      const p = document.createElement("div");
-      p.className = "kpiCell";
-      p.textContent = fmt(convRate * v);
-      pg.appendChild(p);
-    });
+  function columnsPerRow(){
+    const wrap = $("kpiTableWrap");
+    const w = wrap.clientWidth || 600;
+    const avail = Math.max(180, w - LABEL_EST);
+    return Math.max(1, Math.min(10, Math.floor(avail / (CELL_MIN + CELL_GAP))));
   }
+
+  function renderKPITable(wealthArray, convRate){
+    const tbody = $("kpiBody");
+    tbody.innerHTML = "";
+    const cols = columnsPerRow();
+    for (let i=0; i<wealthArray.length; i += cols){
+      const slice = wealthArray.slice(i, i+cols);
+
+      // row 1: Future value + numbers
+      const tr1 = document.createElement("tr");
+      const th1 = document.createElement("th");
+      th1.className = "labelPill";
+      th1.textContent = "Future value of savings (real):";
+      tr1.appendChild(th1);
+      slice.forEach(v=>{
+        const td=document.createElement("td");
+        td.className="cellPill";
+        td.textContent=fmt(v);
+        tr1.appendChild(td);
+      });
+      tbody.appendChild(tr1);
+
+      // row 2: Lifelong pension + aligned numbers
+      const tr2 = document.createElement("tr");
+      const th2 = document.createElement("th");
+      th2.className = "labelPill";
+      th2.textContent = "Lifelong pension (real):";
+      tr2.appendChild(th2);
+      slice.forEach(v=>{
+        const td=document.createElement("td");
+        td.className="cellPill";
+        td.textContent=fmt(convRate * v);
+        tr2.appendChild(td);
+      });
+      tbody.appendChild(tr2);
+    }
+  }
+
+  // Keep last terminal/conv to reflow table on resize
+  let _terminalCache = [], _convCache = 0;
+  window.addEventListener("resize", () => {
+    if (_terminalCache.length) renderKPITable(_terminalCache, _convCache);
+  });
 
   // WebR
   import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
   const webr=new WebR();
 
-  // helpers for WebR list/matrix
   const getListElem=(obj,name)=>{
     if (!obj) return undefined;
     if (obj[name]!==undefined) return obj[name];
@@ -301,12 +290,8 @@
   async function compute(){
     try{
       refresh();
-      const pmin = +pminEl.value,
-            nper = parseInt(nperEl.value,10),
-            prob = +probEl.value,
-            mu   = +muEl.value,
-            vol  = +volEl.value,
-            conv = +convEl.value;
+      const pmin=+pminEl.value, nper=parseInt(nperEl.value,10), prob=+probEl.value,
+            mu=+muEl.value, vol=+volEl.value, conv=+convEl.value;
 
       const r = await webr.evalR(`
         out <- uadd2(
@@ -320,13 +305,11 @@
       const root=await r.toJs();
       const results=getListElem(root,"results") || root.results;
 
-      // KPI
       const pmtO = getListElem(results,"pmt_required");
       const pmtV = Array.isArray(pmtO) ? Number(pmtO[0]) :
                    (pmtO && pmtO.values ? Number(pmtO.values[0]) : Number(pmtO));
-      document.getElementById("savingsBadge").textContent = fmt(pmtV, {maximumFractionDigits:2});
+      $("savingsBadge").textContent = fmt(pmtV, {maximumFractionDigits:2});
 
-      // Paths
       const tArr  = vec(getListElem(results,"t"));
       const pathsO= getListElem(results,"paths");
       const flat  = vec(pathsO);
@@ -343,14 +326,12 @@
       }
       drawPaths(tArr, paths);
 
-      // Terminal rows
       const terminal = paths.map(row => row[row.length-1] || 0);
-      renderTerminalRows(terminal, conv);
+      _terminalCache = terminal; _convCache = conv;
+      renderKPITable(terminal, conv);
 
-      if (debug) log({pmt_required:pmtV, tLen:tArr.length, nPaths:paths.length, terminal});
-    }catch(e){
-      log("Compute error: "+(e?.message||e));
-    }
+      if (debug) log({pmt_required:pmtV, tLen:tArr.length, nPaths:paths.length, terminal, cols:columnsPerRow()});
+    }catch(e){ log("Compute error: "+(e?.message||e)); }
   }
 
   document.getElementById("compute").addEventListener("click", compute);
