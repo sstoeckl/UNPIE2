@@ -75,23 +75,27 @@
     border-radius: 8px;
     white-space: nowrap;
   }
-  .kpiGrid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    min-width: 0;
+  /* was: grid with minmax(...) making wide columns */
+  .kpiGrid{
+    display:flex;          /* flex wraps naturally */
+    flex-wrap:wrap;
+    gap:6px;
+    align-items:center;
+    min-width:0;
   }
-  .kpiCell {
-    flex: 0 1 64px;    /* target width ≈64px (shrinks if needed) */
-    background: #f7f7f9;
-    padding: .26rem .36rem;
-    border-radius: 8px;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-size: 12px;
+  .kpiCell{
+    display:inline-flex;   /* size = content + padding */
+    align-items:center;
+    justify-content:center;/* no leading blank */
+    background:#f7f7f9;
+    padding:.22rem .34rem; /* compact */
+    border-radius:8px;
+    font-variant-numeric:tabular-nums;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    font-size:12px;
+    flex:0 0 auto;         /* do not grow */
   }
   @media (max-width: 520px){
     .kpiRow { grid-template-columns: 1fr; }
