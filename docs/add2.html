@@ -30,13 +30,48 @@
   .badge{display:inline-block;background:#f7f7f9;border-radius:10px;padding:.45rem .7rem;margin-left:.5rem;font-variant-numeric:tabular-nums}
   .chartWrap{flex:1 0 auto;height:360px}
   #line{width:100%;height:100%}
-  .kpi{margin-top:6px;text-align:center}
-  .kpiTable { border-collapse: separate; border-spacing: 6px; margin: 0 auto; }
-  .kpiTable th, .kpiTable td {
-    background:#f7f7f9; padding:.45rem .6rem; border-radius:8px;
-    font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap;
+  /* make the right panel shrink properly */
+  .panel.right { min-width: 0; }
+  
+  /* responsive KPI rows */
+  .kpi { margin-top: 6px; }
+  .kpiRow {
+    display: grid;
+    grid-template-columns: auto 1fr; /* left label + grid of values */
+    align-items: start;
+    gap: 8px;
+    margin-bottom: 8px;
   }
-  .kpiTable th.label { background:#ebedf0; color:#333; text-align:left; }
+  .labelPill {
+    background: #ebedf0;
+    color: #333;
+    padding: .45rem .6rem;
+    border-radius: 8px;
+    white-space: nowrap;
+  }
+  
+  .kpiGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(95px, 1fr)); /* wraps */
+    gap: 8px;
+    min-width: 0;  /* allow shrinking in grid */
+  }
+  .kpiCell {
+    background: #f7f7f9;
+    padding: .45rem .6rem;
+    border-radius: 8px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  /* optional: on very narrow screens, stack label above grid */
+  @media (max-width: 520px) {
+    .kpiRow { grid-template-columns: 1fr; }
+  }
+
   .debug{margin-top:6px;background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;flex:0 0 110px;display:none}
   pre{margin:0;font-size:.82rem}
 </style>
@@ -115,16 +150,14 @@
         <div class="chartWrap"><canvas id="line"></canvas></div>
 
         <div class="kpi">
-          <table class="kpiTable" id="kpiTableAdd2">
-            <tr id="add2RowWealth">
-              <th class="label" id="kWealthHdr">Future value of savings (real):</th>
-              <!-- 10 values inserted by JS -->
-            </tr>
-            <tr id="add2RowPension">
-              <th class="label" id="kPensHdr">Lifelong pension (real):</th>
-              <!-- 10 values inserted by JS -->
-            </tr>
-          </table>
+          <div class="kpiRow">
+            <div class="labelPill" id="kWealthHdr">Future value of savings (real):</div>
+            <div class="kpiGrid" id="wealthGrid"></div>
+          </div>
+          <div class="kpiRow">
+            <div class="labelPill" id="kPensHdr">Lifelong pension (real):</div>
+            <div class="kpiGrid" id="pensGrid"></div>
+          </div>
         </div>
 
         <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
@@ -188,15 +221,25 @@
     line.update();
   }
 
-  function renderTerminalRows(terminalWealth, convRate){
-    // Row 1: final wealth per sample path
-    const rW = $("add2RowWealth");
-    rW.querySelectorAll("td").forEach(td=>td.remove());
-    terminalWealth.forEach(v=>{
-      const td=document.createElement("td");
-      td.textContent = fmt(v);
-      rW.appendChild(td);
+  function renderTerminalRows(terminalWealth, convRate) {
+    const wg = document.getElementById("wealthGrid");
+    const pg = document.getElementById("pensGrid");
+    wg.innerHTML = "";
+    pg.innerHTML = "";
+  
+    terminalWealth.forEach(v => {
+      const w = document.createElement("div");
+      w.className = "kpiCell";
+      w.textContent = fmt(v);
+      wg.appendChild(w);
+  
+      const p = document.createElement("div");
+      p.className = "kpiCell";
+      p.textContent = fmt(convRate * v);
+      pg.appendChild(p);
     });
+  }
+
 
     // Row 2: pension = conv * final wealth
     const rP = $("add2RowPension");
