@@ -76,20 +76,22 @@
     white-space: nowrap;
   }
   .kpiGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(95px, 1fr));
-    gap: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
     min-width: 0;
   }
   .kpiCell {
+    flex: 0 1 64px;    /* target width ≈64px (shrinks if needed) */
     background: #f7f7f9;
-    padding: .45rem .6rem;
+    padding: .26rem .36rem;
     border-radius: 8px;
     text-align: right;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    font-size: 12px;
   }
   @media (max-width: 520px){
     .kpiRow { grid-template-columns: 1fr; }
