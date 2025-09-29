@@ -1,4 +1,4 @@
-# add2: Years to ruin when spending yearly from given retirement savings
+# add3: Years to ruin when spending yearly from given retirement savings
 # spend_real : yearly (real) spending, paid at END of each year
 # wealth0    : real wealth at retirement (t = 0)
 # mu_real    : expected REAL return per year (e.g., 0.03)
@@ -13,7 +13,7 @@
 #   m        = log(1 + mu_real) - 0.5*vol_real^2  (so E[gross]=1+mu_real)
 #   W_t      = pmax(0, W_{t-1} * gross_t - spend_real),   W_0 = wealth0
 
-uadd2 <- function(spend_real, wealth0, mu_real, vol_real,
+uadd3 <- function(spend_real, wealth0, mu_real, vol_real,
                   nper = 25L, n_scen = 10000L, n_show = 10L, seed = NULL) {
   stopifnot(is.numeric(spend_real), is.numeric(wealth0),
             is.numeric(mu_real), is.numeric(vol_real))
