@@ -1,68 +1,53 @@
-# add2: Real yearly savings required to reach a minimum desired (real)
-#       yearly pension with probability p
-# Modell (wie uadd1/uadd4):
-#   End-of-year Beiträge (real): W_t = W_{t-1} * G_t + pmt_real, W_0=0
-#   G_t = exp(m + vol_real * Z_t), Z_t ~ N(0,1), m = log(1+mu_real) - 0.5*vol_real^2
-#   => W_T = pmt_real * H,  H = C_T * S_T,
-#      C_t = prod_{k=1..t} G_k,  S_t = sum_{k=1..t} 1/C_k
-# Zielbedingung: P(conv * W_T >= pension_min) >= prob_ok
-#   <=> pmt_real >= (pension_min/conv) / Q_{1-prob_ok}(H)
+# uadd2_analytic: required yearly savings consistent with original package
+# - Begin-of-year deposits (annuity-due)
+# - Log-returns eps ~ N(mu_log, sigma_log), G = exp(eps)
+# - A = W*/Q_{1-p}(H) with H = sum_{j=0}^{T-1} C_j
 
-uadd2 <- function(pension_min, nper, mu_real, vol_real, conv, prob_ok,
-                  n_scen = 10000L, n_show = 10L, seed = NULL) {
+uadd2 <- function(pension_min, nper, mu_log, sigma_log, conv, prob_ok,
+                  n_scen = 1000L, n_show = 10L, seed = 1L) {
   stopifnot(is.numeric(pension_min), is.numeric(nper),
-            is.numeric(mu_real), is.numeric(vol_real),
+            is.numeric(mu_log), is.numeric(sigma_log),
             is.numeric(conv), is.numeric(prob_ok))
-  if (!is.null(seed)) set.seed(as.integer(seed))
-  
+  set.seed(as.integer(seed))
   nper    <- as.integer(nper)
-  prob_ok <- min(max(as.numeric(prob_ok), 0), 1)
+  n_scen  <- as.integer(n_scen)
+  prob_ok <- max(0, min(1, prob_ok))
   
-  # lognormal mit E[G]=1+mu_real
-  m <- log1p(mu_real) - 0.5 * vol_real^2
-  Z <- matrix(rnorm(n_scen * nper), nrow = n_scen, ncol = nper)
-  G <- exp(m + vol_real * Z)
-  
-  # kumulative Produkte/Summen
-  C <- matrix(0.0, nrow = n_scen, ncol = nper)
-  S <- matrix(0.0, nrow = n_scen, ncol = nper)
-  C[, 1] <- G[, 1]
-  S[, 1] <- 1 / C[, 1]
-  if (nper >= 2L) {
-    for (t in 2:nper) {
-      C[, t] <- C[, t - 1] * G[, t]
-      S[, t] <- S[, t - 1] + 1 / C[, t]
-    }
+  # eps ~ N(mu_log, sigma_log)  -> cumulative products C_j = exp(sum eps_1..eps_j)
+  if (nper == 1L) {
+    H_unit <- rep(1, n_scen)                 # sum_{j=0}^{0} C_j = 1
+    M_show <- matrix(1, nrow = min(n_show, n_scen), ncol = 1)
+  } else {
+    eps   <- matrix(rnorm(n_scen * nper, mean = mu_log, sd = sigma_log), nrow = n_scen)
+    Ccum  <- t(apply(eps[, 1:(nper - 1), drop = FALSE], 1L, cumsum))  # size: n_scen x (T-1)
+    C     <- exp(Ccum)                                                # C_1..C_{T-1}
+    S     <- t(apply(C, 1L, cumsum))                                  # S_{t-1} = Σ C_k
+    M     <- cbind(1, 1 + S)                                          # wealth factors per unit A
+    H_unit <- M[, nper]                                               # = sum_{j=0}^{T-1} C_j
+    M_show <- M[seq_len(min(n_show, n_scen)), , drop = FALSE]
   }
   
-  H <- C[, nper] * S[, nper]
   W_star <- pension_min / conv
   
-  qH <- as.numeric(stats::quantile(H, probs = 1 - prob_ok, names = FALSE, type = 7, na.rm = TRUE))
-  pmt_req <- if (is.finite(qH) && qH > 0) W_star / qH else Inf
+  # diskretes (1-p)-Quantil (Orderstatistik, konsistent zum Zählkriterium im Paket)
+  k  <- max(1L, min(n_scen, ceiling((1 - prob_ok) * n_scen)))
+  Hq <- sort(H_unit, partial = k)[k]
   
-  # Beispielpfade (Wealth) bei pmt_req
-  show_idx <- seq_len(min(n_show, n_scen))
-  C_show <- C[show_idx, , drop = FALSE]
-  S_show <- S[show_idx, , drop = FALSE]
-  W_show <- pmt_req * (C_show * S_show)
-  
-  probs <- seq(0.1, 0.9, by = 0.1)
-  qH_vec <- as.numeric(stats::quantile(H, probs = probs, names = FALSE, type = 7, na.rm = TRUE))
+  A_req <- if (is.finite(Hq) && Hq > 0) W_star / Hq else Inf
   
   list(
     ok = TRUE,
     inputs = list(
       pension_min = pension_min, nper = nper,
-      mu_real = mu_real, vol_real = vol_real, conv = conv, prob_ok = prob_ok,
-      n_scen = n_scen, n_show = n_show
+      mu_log = mu_log, sigma_log = sigma_log, conv = conv, prob_ok = prob_ok,
+      n_scen = n_scen, n_show = n_show, seed = seed
     ),
     results = list(
       t = 1:nper,
-      pmt_required = pmt_req,
-      paths = W_show,         # n_show × nper (Wealth-Pfade)
-      H_quantiles = qH_vec,   # 10%..90% (Diagnostik)
-      probs = probs
+      pmt_required = A_req,
+      paths = M_show * A_req,                  # wealth paths per sample
+      terminal_wealth  = H_unit * A_req,       # for the table
+      terminal_pension = H_unit * A_req * conv
     )
   )
 }
