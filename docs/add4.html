@@ -10,15 +10,42 @@
 
 <style>
   html,body{height:100%;margin:0}
-  body{overflow:hidden;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#fff;color:#111}
-  .app{height:640px;display:grid;place-items:stretch}
-  .wrap{max-width:1150px;margin:0 auto;padding:8px 12px;height:100%;box-sizing:border-box}
+  body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#fff;color:#111}
+
+  /* ===== outer shell (same as add1/add2/add3) ===== */
+  .app-shell{
+    max-width: 1120px;
+    width: min(1120px, calc(100% - 16px));
+    margin: 10px auto;
+    border: 1px solid #d9d9df;
+    border-radius: 10px;
+    background: #fff;
+    padding: 6px;
+    display: grid;
+    grid-template-rows: auto min-content;
+    row-gap: 18px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  }
+  .app-shell__footer{
+    justify-self: end;
+    align-self: end;
+    font-size: .75rem;
+    color: #666;
+    white-space: nowrap;
+  }
+
+  /* ===== inner app ===== */
+  .wrap{ padding:8px 12px }
   .title{text-align:center;margin:4px 0 6px;font-size:1.15rem}
   .subtitle{text-align:center;margin-bottom:6px;color:#666}
-  .grid{display:grid;grid-template-columns:340px 1fr;gap:12px;height:calc(100% - 52px)}
+  .badge{display:inline-block;background:#f7f7f9;border-radius:10px;padding:.45rem .7rem;margin-left:.5rem;font-variant-numeric:tabular-nums}
+
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:12px}
   @media (max-width:900px){.grid{grid-template-columns:1fr}}
   .panel{border:1px solid #e8e8e8;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);background:#fff}
   .left{padding:10px;overflow:auto}
+  .right{padding:10px;display:flex;flex-direction:column;gap:10px;min-width:0}
+
   .group{border:1px solid #ddd;border-radius:10px;padding:10px;margin-bottom:10px}
   .group h3{margin:0 0 8px;font-size:1rem}
   .row{display:flex;align-items:center;gap:.8rem}
@@ -26,23 +53,31 @@
   .val{width:7rem;text-align:right;color:#666;font-variant-numeric:tabular-nums}
   input[type=range]{width:100%}
   button{padding:.55rem .9rem;border:0;border-radius:10px;background:#eee;cursor:pointer}
-  .right{padding:10px;display:flex;flex-direction:column;height:100%;overflow:hidden}
-  .badge{display:inline-block;background:#f7f7f9;border-radius:10px;padding:.45rem .7rem;margin-left:.5rem;font-variant-numeric:tabular-nums}
-  .chartWrap{flex:1 0 auto;height:360px}
+
+  .chartWrap{height:380px}
   #line{width:100%;height:100%}
-  .kpi{margin-top:6px;text-align:center}
-  .kpiTable { border-collapse: separate; border-spacing: 6px; margin: 0 auto; }
-  .kpiTable th, .kpiTable td {
-    background:#f7f7f9; padding:.45rem .6rem; border-radius:8px;
-    font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap;
+
+  /* ===== wrapping KPI table (two-row blocks) ===== */
+  .kpiBlock{ width:100% }
+  .kpiTable{ width:100%; border-collapse:separate; border-spacing:6px; table-layout:auto }
+  .labelPill{
+    background:#ebedf0; color:#333;
+    padding:.32rem .48rem; border-radius:8px; white-space:nowrap;
+    font-size:12px; text-align:left;
   }
-  .kpiTable th.label { background:#ebedf0; color:#333; text-align:left; }
-  .debug{margin-top:6px;background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;flex:0 0 110px;display:none}
+  .cellPill{
+    background:#f7f7f9; padding:.28rem .40rem; border-radius:8px;
+    text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap;
+    font-size:12px;
+  }
+
+  /* Debug */
+  .debug{background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;display:none}
   pre{margin:0;font-size:.82rem}
 </style>
 </head>
 <body>
-<div class="app">
+<div class="app-shell">
   <div class="wrap">
     <div class="title" id="title">App 13: Maximum periodic spending possible to exceed specified minimum years to ruin with probability p</div>
     <div class="subtitle">
@@ -105,21 +140,22 @@
       <div class="panel right">
         <div class="chartWrap"><canvas id="line"></canvas></div>
 
-        <div class="kpi">
-          <table class="kpiTable" id="kpiTableAdd4">
+        <div class="kpiBlock" id="kpiTableWrap">
+          <table class="kpiTable"><tbody id="kpiBody">
             <tr id="add4RowHeader">
-              <th class="label" id="kYearsHdr">Time since entering retirement phase (years):</th>
+              <th class="labelPill" id="kYearsHdr">Time since entering retirement phase (years):</th>
             </tr>
             <tr id="add4RowCounts">
-              <th class="label" id="kRuinsHdr">Number of ruins after N years:</th>
+              <th class="labelPill" id="kRuinsHdr">Number of ruins after N years:</th>
             </tr>
-          </table>
+          </tbody></table>
         </div>
 
         <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
       </div>
     </div>
   </div>
+  <div class="app-shell__footer">© 2025 by Dr. S. Stöckl</div>
 </div>
 
 <script type="module">
@@ -155,54 +191,38 @@
   };
   const T = I18N[lang] || I18N.en_en;
 
-  // safe text injection (no nulls)
-  const ids = ["title","gWealth","lWealth","gMinYrs","lMinYrs","gProb","lProb","gRet","lMu","gVol","lVol","kYearsHdr","kRuinsHdr"];
-  ids.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = T[id]; });
-  const subt = document.getElementById("subtitleText"); if (subt) subt.textContent = T.subtitle;
-  const btn  = document.getElementById("compute"); if (btn) btn.textContent = T.btn;
-  const debugBox = document.getElementById("debugBox"); if (debugBox) debugBox.style.display = debug ? "block" : "none";
+  // safe injection
+  ["title","gWealth","lWealth","gMinYrs","lMinYrs","gProb","lProb","gRet","lMu","gVol","lVol","kYearsHdr","kRuinsHdr"]
+    .forEach(id => { const el=document.getElementById(id); if(el) el.textContent=T[id]; });
+  const subt=document.getElementById("subtitleText"); if (subt) subt.textContent=T.subtitle;
+  const btn=document.getElementById("compute"); if (btn) btn.textContent=T.btn;
+  const debugBox=document.getElementById("debugBox"); if (debugBox) debugBox.style.display = debug ? "block" : "none";
 
-  // element getter
-  const $ = id => document.getElementById(id);
-
-  // UI elements (explicit bindings)
-  const wealthEl = $("wealth");
-  const minyrsEl = $("minyrs");
-  const probEl   = $("prob");
-  const muEl     = $("mu");
-  const volEl    = $("vol");
-
-  const wealthLbl = $("wealthLabel");
-  const minyrsLbl = $("minyrsLabel");
-  const probLbl   = $("probLabel");
-  const muLbl     = $("muLabel");
-  const volLbl    = $("volLabel");
-
-  const badge = $("spendBadge");
-  const dbgEl = $("debug");
-
-  const fmt = (x,opts={}) => Number(x).toLocaleString(undefined,{maximumFractionDigits:0,...opts});
-  const pct = x => (parseFloat(x)*100).toFixed(2)+"%";
-  const log = x => { if (debug) dbgEl.textContent = typeof x==="string" ? x : JSON.stringify(x,null,2); };
+  // UI
+  const $=id=>document.getElementById(id);
+  const wealthEl=$("wealth"), minyrsEl=$("minyrs"), probEl=$("prob"), muEl=$("mu"), volEl=$("vol");
+  const wealthLbl=$("wealthLabel"), minyrsLbl=$("minyrsLabel"), probLbl=$("probLabel"), muLbl=$("muLabel"), volLbl=$("volLabel");
+  const badge=$("spendBadge"), dbgEl=$("debug");
+  const fmt=(x,opts={})=>Number(x).toLocaleString(undefined,{maximumFractionDigits:0,...opts});
+  const pct=x=>(parseFloat(x)*100).toFixed(2)+"%";
+  const log=x=>{ if(debug) dbgEl.textContent = typeof x==="string" ? x : JSON.stringify(x,null,2); };
 
   function refresh(){
-    wealthLbl.textContent = fmt(wealthEl.value,{maximumFractionDigits:0});
-    minyrsLbl.textContent = parseInt(minyrsEl.value,10);
-    probLbl.textContent   = pct(probEl.value);
-    muLbl.textContent     = pct(muEl.value);
-    volLbl.textContent    = pct(volEl.value);
+    wealthLbl.textContent=fmt(wealthEl.value);
+    minyrsLbl.textContent=parseInt(minyrsEl.value,10);
+    probLbl.textContent=pct(probEl.value);
+    muLbl.textContent=pct(muEl.value);
+    volLbl.textContent=pct(volEl.value);
   } refresh();
 
   // Chart
   const COLORS=["#000","#9e9e9e","#1976d2","#ff9800","#7b1fa2","#2e7d32","#c2185b","#455a64","#f57c00","#512da8"];
   const ctx=document.getElementById("line").getContext("2d");
   const line=new Chart(ctx,{type:"line",data:{labels:[],datasets:[]},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      scales:{ x:{title:{display:true,text:"N"}}, y:{beginAtZero:true,title:{display:true,text:"Value"},ticks:{callback:v=>fmt(v)}}},
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{x:{title:{display:true,text:"N"}},y:{beginAtZero:true,title:{display:true,text:"Value"},ticks:{callback:v=>fmt(v)}}},
       elements:{point:{radius:2}}, plugins:{legend:{display:false}}
     }});
-
   function drawPaths(t, paths){
     line.data.labels=t.map(String);
     line.data.datasets=paths.map((row,i)=>({
@@ -213,20 +233,54 @@
     line.update();
   }
 
-  function renderKpiTableAdd4(years, counts){
-    const hdr = $("add4RowHeader");
-    const cnt = $("add4RowCounts");
-    hdr.querySelectorAll("td").forEach(td=>td.remove());
-    cnt.querySelectorAll("td").forEach(td=>td.remove());
-    (years||[]).forEach(v=>{ const td=document.createElement("td"); td.textContent=fmt(v); hdr.appendChild(td); });
-    (counts||[]).forEach(v=>{ const td=document.createElement("td"); td.textContent=fmt(v); cnt.appendChild(td); });
+  // ===== wrapping, sorted table (years asc) =====
+  const CELL_MIN=80, CELL_GAP=12, LABEL_EST=240;
+  function columnsPerRow(){
+    const wrap = document.getElementById("kpiTableWrap");
+    const w = wrap.clientWidth || 600;
+    const avail = Math.max(200, w - LABEL_EST);
+    return Math.max(1, Math.min(12, Math.floor(avail / (CELL_MIN + CELL_GAP))));
   }
+  function renderKPITableAdd4(years, counts){
+    const tbody=document.getElementById("kpiBody");
+    tbody.innerHTML="";
+    const pairs=[];
+    const L=Math.min(years?.length||0, counts?.length||0);
+    for(let i=0;i<L;i++){
+      const y=Number(years[i]), c=Number(counts[i]);
+      if(Number.isFinite(y)&&Number.isFinite(c)) pairs.push({y,c});
+    }
+    pairs.sort((a,b)=>a.y-b.y);
+
+    const cols=columnsPerRow();
+    for(let i=0;i<pairs.length;i+=cols){
+      const slice=pairs.slice(i,i+cols);
+
+      const tr1=document.createElement("tr");
+      const th1=document.createElement("th");
+      th1.className="labelPill"; th1.textContent=T.kYearsHdr;
+      tr1.appendChild(th1);
+      slice.forEach(({y})=>{
+        const td=document.createElement("td"); td.className="cellPill"; td.textContent=fmt(y); tr1.appendChild(td);
+      });
+      tbody.appendChild(tr1);
+
+      const tr2=document.createElement("tr");
+      const th2=document.createElement("th");
+      th2.className="labelPill"; th2.textContent=T.kRuinsHdr;
+      tr2.appendChild(th2);
+      slice.forEach(({c})=>{
+        const td=document.createElement("td"); td.className="cellPill"; td.textContent=fmt(c); tr2.appendChild(td);
+      });
+      tbody.appendChild(tr2);
+    }
+  }
+  window.addEventListener("resize", ()=>{ if (window._yearsCountsCache) renderKPITableAdd4(window._yearsCountsCache.y, window._yearsCountsCache.c); });
 
   // WebR
   import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
   const webr=new WebR();
 
-  // helpers to read WebR list/matrix structures
   const getListElem=(obj,name)=>{
     if (!obj) return undefined;
     if (obj[name]!==undefined) return obj[name];
@@ -252,11 +306,7 @@
   async function compute(){
     try{
       refresh();
-      const w0  = +wealthEl.value,
-            myn = parseInt(minyrsEl.value,10),
-            pr  = +probEl.value,
-            mu  = +muEl.value,
-            sg  = +volEl.value;
+      const w0=+wealthEl.value, myn=parseInt(minyrsEl.value,10), pr=+probEl.value, mu=+muEl.value, sg=+volEl.value;
 
       const r = await webr.evalR(`
         out <- uadd4(
@@ -274,37 +324,34 @@
       const spendO = getListElem(results,"spend_opt");
       const spendV = Array.isArray(spendO) ? Number(spendO[0]) :
                      (spendO && spendO.values ? Number(spendO.values[0]) : Number(spendO));
-      badge.textContent = fmt(spendV);
+      if (badge) badge.textContent = fmt(spendV);
 
       const years  = vec(getListElem(results,"table_years"));
       const counts = vec(getListElem(results,"table_cum_ruins"));
 
       const pathsO = getListElem(results,"paths");
       const flat   = vec(pathsO);
-
-      let nrow=0, ncol=0;
-      if (pathsO && pathsO.dim) { const d=vec(pathsO.dim); if (d.length===2){ nrow=d[0]; ncol=d[1]; } }
+      let nrow=0,ncol=0;
+      if (pathsO && pathsO.dim){ const d=vec(pathsO.dim); if(d.length===2){ nrow=d[0]; ncol=d[1]; } }
       if ((!nrow||!ncol) && tArr.length>0 && flat.length%tArr.length===0){ ncol=tArr.length; nrow=flat.length/ncol; }
-
       const paths=[];
       if (nrow>0 && ncol>0 && flat.length===nrow*ncol){
-        for(let r=0;r<nrow;r++){
-          const row=[]; for(let c=0;c<ncol;c++){ row.push( flat[r + c*nrow] ); }
-          paths.push(row);
-        }
+        for(let rI=0;rI<nrow;rI++){ const row=[]; for(let cI=0;cI<ncol;cI++){ row.push(flat[rI + cI*nrow]); } paths.push(row); }
       }
 
       drawPaths(tArr, paths);
-      renderKpiTableAdd4(years, counts);
+      window._yearsCountsCache = {y: years, c: counts};
+      renderKPITableAdd4(years, counts);
 
-      if (debug) log({spend:spendV, tLen:tArr.length, nPaths:paths.length, rowLen:paths[0]?.length||0, years, counts});
+      if (debug) log({spend:spendV, tLen:tArr.length, nPaths:paths.length, years, counts});
     }catch(e){
       log("Compute error: "+(e?.message||e));
     }
   }
 
-  $("compute").addEventListener("click", compute);
+  document.getElementById("compute").addEventListener("click", compute);
   [wealthEl,minyrsEl,probEl,muEl,volEl].forEach(el=>el.addEventListener("input", compute));
+
   await init(); await compute();
 </script>
 </body>
