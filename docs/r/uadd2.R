@@ -4,11 +4,11 @@
 # - A = W*/Q_{1-p}(H) with H = sum_{j=0}^{T-1} C_j
 
 uadd2 <- function(pension_min, nper, mu_log, sigma_log, conv, prob_ok,
-                  n_scen = 1000L, n_show = 10L, seed = 1L) {
+                  n_scen = 1000L, n_show = 10L, seed = NULL) {
   stopifnot(is.numeric(pension_min), is.numeric(nper),
             is.numeric(mu_log), is.numeric(sigma_log),
             is.numeric(conv), is.numeric(prob_ok))
-  set.seed(as.integer(seed))
+  if (!is.null(seed)) set.seed(as.integer(seed))
   nper    <- as.integer(nper)
   n_scen  <- as.integer(n_scen)
   prob_ok <- max(0, min(1, prob_ok))
