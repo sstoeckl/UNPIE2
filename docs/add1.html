@@ -10,14 +10,40 @@
 
 <style>
   html,body{height:100%;margin:0}
-  body{overflow:hidden;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#fff;color:#111}
-  .app{height:640px;display:grid;place-items:stretch}
-  .wrap{max-width:1150px;margin:0 auto;padding:8px 12px;height:100%;box-sizing:border-box}
-  .title{text-align:center;margin:4px 0 8px;font-size:1.15rem}
-  .grid{display:grid;grid-template-columns:340px 1fr;gap:12px;height:calc(100% - 38px)}
+  body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#fff;color:#111}
+
+  /* ===== outer shell (same as add2) ===== */
+  .app-shell{
+    max-width: 1120px;
+    width: min(1120px, calc(100% - 16px));
+    margin: 10px auto;
+    border: 1px solid #d9d9df;
+    border-radius: 10px;
+    background: #fff;
+    padding: 6px;
+    display: grid;
+    grid-template-rows: auto min-content;
+    row-gap: 18px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  }
+  .app-shell__footer{
+    justify-self: end;
+    align-self: end;
+    font-size: .75rem;
+    color: #666;
+    white-space: nowrap;
+  }
+
+  /* ===== inner app (match add2) ===== */
+  .wrap{ padding:8px 12px }
+  .title{text-align:center;margin:4px 0 6px;font-size:1.15rem}
+
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:12px}
   @media (max-width:900px){.grid{grid-template-columns:1fr}}
   .panel{border:1px solid #e8e8e8;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);background:#fff}
   .left{padding:10px;overflow:auto}
+  .right{padding:10px;display:flex;flex-direction:column;gap:10px;min-width:0}
+
   .group{border:1px solid #ddd;border-radius:10px;padding:10px;margin-bottom:10px}
   .group h3{margin:0 0 8px;font-size:1rem}
   .row{display:flex;align-items:center;gap:.8rem}
@@ -25,24 +51,31 @@
   .val{width:7rem;text-align:right;color:#666;font-variant-numeric:tabular-nums}
   input[type=range]{width:100%}
   button{padding:.55rem .9rem;border:0;border-radius:10px;background:#eee;cursor:pointer}
-  .right{padding:10px;display:flex;flex-direction:column;height:100%;overflow:hidden}
-  .chartWrap{flex:1 0 auto;height:380px}
+
+  .chartWrap{height:380px}
   #line{width:100%;height:100%}
-  .legend{display:flex;gap:1rem;justify-content:center;margin-top:6px;color:#666;font-size:.92rem;flex:0 0 auto;flex-wrap:wrap}
-  .kpi{margin-top:8px}
-  .kpi table{border-collapse:separate;border-spacing:6px}
-  .kpi td{background:#f7f7f9;padding:.35rem .5rem;border-radius:8px;font-variant-numeric:tabular-nums}
-  .kpiTable th, .kpiTable td {
-    background:#f7f7f9; padding:.45rem .6rem; border-radius:8px;
-    font-variant-numeric: tabular-nums;
-    text-align: right; white-space: nowrap;
+
+  /* ===== “real table” that wraps in two-row blocks (same as add2) ===== */
+  .kpiBlock{ width:100% }
+  .kpiTable{ width:100%; border-collapse:separate; border-spacing:6px; table-layout:auto }
+  .labelPill{
+    background:#ebedf0; color:#333;
+    padding:.32rem .48rem; border-radius:8px; white-space:nowrap;
+    font-size:12px; text-align:left;
   }
-  .debug{margin-top:6px;background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;flex:0 0 110px;display:none}
+  .cellPill{
+    background:#f7f7f9; padding:.28rem .40rem; border-radius:8px;
+    text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap;
+    font-size:12px;
+  }
+
+  /* Debug */
+  .debug{background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;display:none}
   pre{margin:0;font-size:.82rem}
 </style>
 </head>
 <body>
-<div class="app">
+<div class="app-shell">
   <div class="wrap">
     <div class="title" id="title">App 10: Real yearly pension resulting from constant (real) yearly savings</div>
 
@@ -101,33 +134,24 @@
       <div class="panel right">
         <div class="chartWrap"><canvas id="line"></canvas></div>
 
-        <div class="kpi">
-          <table class="kpiTable" id="kpiTableAdd1">
-            <tr id="add1RowWealth">
-              <th class="label" id="kWealth">Future value of savings (real):</th>
-              <!-- cells inserted by JS -->
-            </tr>
-            <tr id="add1RowPension">
-              <th class="label" id="kPens">Lifelong pension (real):</th>
-              <!-- cells inserted by JS -->
-            </tr>
-          </table>
+        <!-- WRAPPING TABLE (two-row blocks, sorted ascending) -->
+        <div class="kpiBlock">
+          <table class="kpiTable"><tbody id="kpiBody"></tbody></table>
         </div>
 
         <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
       </div>
     </div>
   </div>
+  <div class="app-shell__footer">© 2025 by Dr. S. Stöckl</div>
 </div>
 
 <script type="module">
-  // Params / i18n
   // URL params
   const params = new URLSearchParams(location.search);
   const lang   = (params.get("lang")   || "en_EN").toLowerCase();
   const debug  = (params.get("debug")  || "FALSE").toUpperCase() === "TRUE";
-  const seedQS = params.get("seed"); // NEW: seed from query string
-  // If not given => NULL in R, else parseInt
+  const seedQS = params.get("seed");
   const seedVal = seedQS ? parseInt(seedQS, 10) : null;
 
   const I18N={
@@ -136,222 +160,183 @@
       gHor:"Time horizon (years to retirement)", lYears:"Years",
       gRet:"Expected (real) return", lMu:"Expected return",
       gVol:"Volatility of expected (real) return", lVol:"Volatility",
-      gConv:"Conversion rate", lConv:"Rate", btn:"Recalculate",
+      gConv:"Conversion rate", lConv:"Rate",
       kWealth:"Future value of savings (real):", kPens:"Lifelong pension (real):"},
     de_de:{title:"App 10: Reale jährliche Rente aus konstanten (realen) jährlichen Sparzahlungen",
       gPmt:"Jährliche (reale) Sparzahlungen", lPmt:"Zahlung pro Jahr",
       gHor:"Zeithorizont (Jahre bis Pension)", lYears:"Jahre",
       gRet:"Erwartete (reale) Rendite", lMu:"Erwartete Rendite",
       gVol:"Volatilität der erwarteten (realen) Rendite", lVol:"Volatilität",
-      gConv:"Umwandlungssatz", lConv:"Satz", btn:"Neu berechnen",
+      gConv:"Umwandlungssatz", lConv:"Satz",
       kWealth:"Zukünftiger Wert der Ersparnisse (real):", kPens:"Lebenslange Rente (real):"}
   };
-  const T=I18N[lang]||I18N.en_en;
-  ["title","gPmt","lPmt","gHor","lYears","gRet","lMu","gVol","lVol","gConv","lConv","kWealth","kPens"]
+  const T = I18N[lang] || I18N.en_en;
+  ["title","gPmt","lPmt","gHor","lYears","gRet","lMu","gVol","lVol","gConv","lConv"]
     .forEach(id=>document.getElementById(id).textContent=T[id]);
-  document.getElementById("compute").textContent=T.btn;
-  document.getElementById("debugBox").style.display=debug?"block":"none";
+  document.getElementById("debugBox").style.display = debug ? "block" : "none";
 
-  // UI
-  const pmtEl=pmt, nperEl=nper, muEl=mu, volEl=vol, convEl=conv;
-  const pmtLbl=pmtLabel, nperLbl=nperLabel, muLbl=muLabel, volLbl=volLabel, convLbl=convLabel;
-  const wealthRow=document.getElementById("wealthRow");
-  const pensionRow=document.getElementById("pensionRow");
-  const dbg=document.getElementById("debug");
-  const fmt=(x,opts={})=>Number(x).toLocaleString(undefined,{maximumFractionDigits:0,...opts});
-  const fmtPct=x=>(parseFloat(x)*100).toFixed(2)+"%";
-  const log=x=>{ if(debug) dbg.textContent=typeof x==="string"?x:JSON.stringify(x,null,2); };
+  // helpers
+  const $ = id => document.getElementById(id);
+  const fmt = (x,opts={}) => Number(x).toLocaleString(undefined,{maximumFractionDigits:0,...opts});
+  const pct = x => (parseFloat(x)*100).toFixed(2)+"%";
+  const log = x => { if (debug) $("debug").textContent = typeof x==="string" ? x : JSON.stringify(x,null,2); };
+
+  // UI nodes
+  const pmtEl=$("pmt"), nperEl=$("nper"), muEl=$("mu"), volEl=$("vol"), convEl=$("conv");
+  const pmtLbl=$("pmtLabel"), nperLbl=$("nperLabel"), muLbl=$("muLabel"), volLbl=$("volLabel"), convLbl=$("convLabel");
   function refresh(){
-    pmtLbl.textContent=fmt(pmtEl.value,{maximumFractionDigits:0});
+    pmtLbl.textContent=fmt(pmtEl.value);
     nperLbl.textContent=parseInt(nperEl.value,10);
-    muLbl.textContent=fmtPct(muEl.value);
-    volLbl.textContent=fmtPct(volEl.value);
-    convLbl.textContent=fmtPct(convEl.value);
+    muLbl.textContent=pct(muEl.value);
+    volLbl.textContent=pct(volEl.value);
+    convLbl.textContent=pct(convEl.value);
   } refresh();
 
-  // Chart.js: multi-line
-  const ctx=document.getElementById("line").getContext("2d");
+  // Chart
   const COLORS=["#000","#9e9e9e","#1976d2","#ff9800","#7b1fa2","#2e7d32","#c2185b","#455a64","#f57c00","#512da8"];
+  const ctx=document.getElementById("line").getContext("2d");
   const line=new Chart(ctx,{type:"line",data:{labels:[],datasets:[]},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      scales:{
-        x:{title:{display:true,text:"T"}},
-        y:{beginAtZero:true,title:{display:true,text:"Value"},ticks:{callback:v=>fmt(v)}}
-      },
-      elements:{point:{radius:2}},
-      plugins:{legend:{display:false}}
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{x:{title:{display:true,text:"T"}},y:{beginAtZero:true,title:{display:true,text:"Value"},ticks:{callback:v=>fmt(v)}}},
+      elements:{point:{radius:2}}, plugins:{legend:{display:false}}
     }});
-
   function drawPaths(t, paths){
     line.data.labels=t.map(String);
-    const n=paths.length; // array of arrays
-    line.data.datasets = paths.map((row, i)=>({
-      label:"path"+(i+1),
-      data:row,
-      borderColor:COLORS[i % COLORS.length],
-      backgroundColor:COLORS[i % COLORS.length],
-      tension:0.15,
-      fill:false
+    line.data.datasets=paths.map((row,i)=>({
+      label:"path"+(i+1), data:row,
+      borderColor:COLORS[i%COLORS.length], backgroundColor:COLORS[i%COLORS.length],
+      tension:0.15, fill:false
     }));
     line.update();
   }
 
-  function renderRow(tbl, values){
-    const tr=document.createElement("tr");
-    values.forEach(v=>{
-      const td=document.createElement("td");
-      td.textContent=fmt(v,{maximumFractionDigits:0});
-      tr.appendChild(td);
-    });
-    tbl.innerHTML=""; tbl.appendChild(tr);
+  // --- wrapping, sorted two-row table (like add2) ---
+  const CELL_MIN = 80, CELL_GAP = 12, LABEL_EST = 180;
+  function columnsPerRow(){
+    const wrapWidth = $("kpiBody").parentElement.parentElement.clientWidth || 600;
+    const avail = Math.max(180, wrapWidth - LABEL_EST);
+    return Math.max(1, Math.min(12, Math.floor(avail / (CELL_MIN + CELL_GAP))));
   }
-  
-function renderKpiTableAdd1(qW, qP) {
-    const rowW = document.getElementById("add1RowWealth");
-    const rowP = document.getElementById("add1RowPension");
-    // clear old cells (keep the first TH label)
-    rowW.querySelectorAll("td").forEach(td => td.remove());
-    rowP.querySelectorAll("td").forEach(td => td.remove());
-  
-    const round0 = v => Number(Math.round(Number(v))).toLocaleString();
-  
-    (qW || []).forEach(v => {
-      const td = document.createElement("td");
-      td.textContent = round0(v);
-      rowW.appendChild(td);
-    });
-  
-    (qP || []).forEach(v => {
-      const td = document.createElement("td");
-      td.textContent = round0(v);
-      rowP.appendChild(td);
-    });
-  }
+  let _cacheWealth=[], _cachePension=[];
+  function renderQuantileBlocks(qW, qP){
+    const tbody = $("kpiBody");
+    tbody.innerHTML = "";
 
+    // zip, filter finite, sort ascending by wealth
+    const pairs = [];
+    const L = Math.min(qW.length, qP.length);
+    for(let i=0;i<L;i++){
+      const w = Number(qW[i]), p = Number(qP[i]);
+      if (Number.isFinite(w) && Number.isFinite(p)) pairs.push({w,p});
+    }
+    pairs.sort((a,b)=>a.w-b.w);
+
+    const cols = columnsPerRow();
+    for(let i=0;i<pairs.length;i+=cols){
+      const slice = pairs.slice(i, i+cols);
+
+      // row 1: wealth
+      const tr1=document.createElement("tr");
+      const th1=document.createElement("th");
+      th1.className="labelPill"; th1.textContent=T.kWealth;
+      tr1.appendChild(th1);
+      slice.forEach(({w})=>{
+        const td=document.createElement("td");
+        td.className="cellPill"; td.textContent=fmt(w);
+        tr1.appendChild(td);
+      });
+      tbody.appendChild(tr1);
+
+      // row 2: pension
+      const tr2=document.createElement("tr");
+      const th2=document.createElement("th");
+      th2.className="labelPill"; th2.textContent=T.kPens;
+      tr2.appendChild(th2);
+      slice.forEach(({p})=>{
+        const td=document.createElement("td");
+        td.className="cellPill"; td.textContent=fmt(p);
+        tr2.appendChild(td);
+      });
+      tbody.appendChild(tr2);
+    }
+  }
+  window.addEventListener("resize", ()=>{ if(_cacheWealth.length){ renderQuantileBlocks(_cacheWealth,_cachePension); } });
 
   // WebR
   import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
   const webr=new WebR();
-  function unwrap(x){ if(x==null||typeof x!=="object")return x; if(x.type==="list"){const o={};(x.names||[]).forEach((k,i)=>o[k]=unwrap(x.values[i]));return o;}
-    if(Array.isArray(x.values)) return x.values.length===1?unwrap(x.values[0]):x.values.map(unwrap); return x; }
-  const num = x => typeof x==="number"?x:(x&&x.values?x.values[0]:Array.isArray(x)?x[0]:NaN);
-  const arr = x => Array.isArray(x)?x.map(num):(x&&x.values?x.values.map(num):[]);
+
+  const getListElem=(obj,name)=>{
+    if (!obj) return undefined;
+    if (obj[name]!==undefined) return obj[name];
+    if (Array.isArray(obj.names)&&Array.isArray(obj.values)){
+      const k=obj.names.indexOf(name); if(k>=0) return obj.values[k];
+    }
+    return undefined;
+  };
+  const vec=x=>{
+    if (!x) return [];
+    if (Array.isArray(x)) return x.map(Number);
+    if (typeof x==="object" && Array.isArray(x.values)) return x.values.map(Number);
+    if (typeof x==="number") return [x];
+    return [];
+  };
 
   async function init(){
-    log("Starting WebR…");
+    if (debug) log("Starting WebR…");
     await webr.init();
     const code=await (await fetch("./r/uadd1.R")).text();
     await webr.evalR(code);
-    log("WebR ready.");
+    if (debug) log("WebR ready.");
   }
 
   async function compute(){
-    try {
+    try{
       refresh();
-  
-      const p  = +pmtEl.value;
-      const n  = parseInt(nperEl.value, 10);
-      const mu = +muEl.value;
-      const s  = +volEl.value;
-      const c  = +convEl.value;
-  
-      // R: nur uadd1() zurückgeben (keine JSON/Extras)
+      const p=+pmtEl.value, n=parseInt(nperEl.value,10), mu=+muEl.value, s=+volEl.value, c=+convEl.value;
+
       const r = await webr.evalR(`
         out <- uadd1(
           pmt_real=${p}, nper=${n}, mu_real=${mu}, vol_real=${s}, conv=${c},
           n_scen=10000, n_show=10,
-          seed=${seedVal !== null ? seedVal : "NULL"}
-        )
-        out
+          seed=${seedVal!==null?seedVal:"NULL"}
+        ); out
       `);
-  
-      const root = await r.toJs();
-  
-      // --- helper: hole ein Element aus einer R-Liste via Namen robust ---
-      const getListElem = (listObj, name) => {
-        if (!listObj) return undefined;
-        if (listObj[name] !== undefined) return listObj[name];
-        if (Array.isArray(listObj.names) && Array.isArray(listObj.values)) {
-          const k = listObj.names.indexOf(name);
-          if (k >= 0) return listObj.values[k];
-        }
-        return undefined;
-      };
-  
-      // --- helper: WebR-Vektor -> JS array ---
-      const vec = (x) => {
-        if (!x) return [];
-        if (Array.isArray(x)) return x.map(Number);
-        if (typeof x === "object" && Array.isArray(x.values)) return x.values.map(Number);
-        if (typeof x === "number") return [x];
-        return [];
-      };
-  
-      // 1) in results rein
-      const results = getListElem(root, "results") || root.results;
-  
-      // 2) t, Quantile, paths-Objekt holen
-      const tArr   = vec(getListElem(results, "t"));
-      const qW     = vec(getListElem(results, "quantiles_wealth"));
-      const qP     = vec(getListElem(results, "quantiles_pension"));
-      const pathsO = getListElem(results, "paths");
-  
-      // 3) flache Werte und (wenn vorhanden) Dimensionen besorgen
-      const flat = vec(pathsO); // flach (length = nrow*ncol)
-      // versuche dim direkt
-      let nrow = 0, ncol = 0;
-  
-      // a) dim direkt
-      if (pathsO && pathsO.dim) {
-        const d = vec(pathsO.dim);
-        if (d.length === 2) { nrow = d[0]; ncol = d[1]; }
-      }
-      // b) evtl. in attributes$dim
-      if ((!nrow || !ncol) && pathsO && pathsO.attributes) {
-        const attrs = pathsO.attributes;
-        // attrs kann eine Liste mit names/values sein
-        const dimObj = getListElem(attrs, "dim");
-        const d = vec(dimObj);
-        if (d.length === 2) { nrow = d[0]; ncol = d[1]; }
-      }
-      // c) Fallback: deduziere aus t-Länge und flatLen
-      if ((!nrow || !ncol) && tArr.length > 0 && flat.length % tArr.length === 0) {
-        ncol = tArr.length;
-        nrow = flat.length / ncol;
-      }
-  
-      // 4) Pfade in R-Column‑Major rekonstruieren
-      const paths = [];
-      if (nrow > 0 && ncol > 0 && flat.length === nrow * ncol) {
-        for (let rIdx = 0; rIdx < nrow; rIdx++) {
-          const row = [];
-          for (let cIdx = 0; cIdx < ncol; cIdx++) {
-            row.push(flat[rIdx + cIdx * nrow]); // column‑major!
-          }
+
+      const root=await r.toJs();
+      const results=getListElem(root,"results") || root.results;
+
+      // chart paths
+      const tArr  = vec(getListElem(results,"t"));
+      const pathsO= getListElem(results,"paths");
+      const flat  = vec(pathsO);
+      let nrow=0, ncol=0;
+      if (pathsO && pathsO.dim){ const d=vec(pathsO.dim); if(d.length===2){ nrow=d[0]; ncol=d[1]; } }
+      if ((!nrow||!ncol) && tArr.length>0 && flat.length%tArr.length===0){ ncol=tArr.length; nrow=flat.length/ncol; }
+      const paths=[];
+      if (nrow>0 && ncol>0 && flat.length===nrow*ncol){
+        for(let rI=0;rI<nrow;rI++){
+          const row=[]; for(let cI=0;cI<ncol;cI++){ row.push(flat[rI + cI*nrow]); }
           paths.push(row);
         }
       }
-  
-      // 5) Zeichnen & KPIs
       drawPaths(tArr, paths);
-      // make sure you extract probs from R as well:
-      renderKpiTableAdd1(qW, qP);
-  
-      // Debug
-      const dbgObj = { tLen: tArr.length, nPaths: paths.length, rowLen: paths[0]?.length || 0, nrow, ncol, flatLen: flat.length };
-      document.getElementById('debug').textContent = JSON.stringify(dbgObj, null, 2);
-  
-    } catch (e) {
-      document.getElementById('debug').textContent = "Compute error: " + (e?.message || e);
-      console.error(e);
+
+      // quantiles (wealth & pension), sorted & wrapped
+      const qW = vec(getListElem(results,"quantiles_wealth"));
+      const qP = vec(getListElem(results,"quantiles_pension"));
+      _cacheWealth = qW.slice(); _cachePension = qP.slice();
+      renderQuantileBlocks(qW, qP);
+
+      if (debug) log({tLen:tArr.length, nPaths:paths.length, qW, qP});
+    }catch(e){
+      log("Compute error: "+(e?.message||e));
     }
   }
 
-  // Event listeners
-
   document.getElementById("compute").addEventListener("click", compute);
   [pmtEl,nperEl,muEl,volEl,convEl].forEach(el=>el.addEventListener("input", compute));
+
   await init(); await compute();
 </script>
 </body>
