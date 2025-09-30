@@ -10,15 +10,41 @@
 
 <style>
   html,body{height:100%;margin:0}
-  body{overflow:hidden;font-family:system-ui,Segoe UI,Arial,sans-serif;background:#fff;color:#111}
-  .app{height:640px;display:grid;place-items:stretch}
-  .wrap{max-width:1150px;margin:0 auto;padding:8px 12px;height:100%;box-sizing:border-box}
+  body{font-family:system-ui,Segoe UI,Arial,sans-serif;background:#fff;color:#111}
+
+  /* ===== outer shell (same as add2/add1) ===== */
+  .app-shell{
+    max-width: 1120px;
+    width: min(1120px, calc(100% - 16px));
+    margin: 10px auto;
+    border: 1px solid #d9d9df;
+    border-radius: 10px;
+    background: #fff;
+    padding: 6px;
+    display: grid;
+    grid-template-rows: auto min-content;
+    row-gap: 18px;
+    box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  }
+  .app-shell__footer{
+    justify-self: end;
+    align-self: end;
+    font-size: .75rem;
+    color: #666;
+    white-space: nowrap;
+  }
+
+  /* ===== inner app ===== */
+  .wrap{ padding:8px 12px }
   .title{text-align:center;margin:4px 0 6px;font-size:1.15rem}
   .subtitle{text-align:center;margin-bottom:6px;color:#666}
-  .grid{display:grid;grid-template-columns:340px 1fr;gap:12px;height:calc(100% - 52px)}
+
+  .grid{display:grid;grid-template-columns:340px 1fr;gap:12px}
   @media (max-width:900px){.grid{grid-template-columns:1fr}}
   .panel{border:1px solid #e8e8e8;border-radius:12px;box-shadow:0 1px 2px rgba(0,0,0,.04);background:#fff}
   .left{padding:10px;overflow:auto}
+  .right{padding:10px;display:flex;flex-direction:column;gap:10px;min-width:0}
+
   .group{border:1px solid #ddd;border-radius:10px;padding:10px;margin-bottom:10px}
   .group h3{margin:0 0 8px;font-size:1rem}
   .row{display:flex;align-items:center;gap:.8rem}
@@ -26,26 +52,31 @@
   .val{width:7rem;text-align:right;color:#666;font-variant-numeric:tabular-nums}
   input[type=range]{width:100%}
   button{padding:.55rem .9rem;border:0;border-radius:10px;background:#eee;cursor:pointer}
-  .right{padding:10px;display:flex;flex-direction:column;height:100%;overflow:hidden}
-  .chartWrap{flex:1 0 auto;height:360px}
+
+  .chartWrap{height:380px}
   #line{width:100%;height:100%}
-  .kpi{margin-top:8px;text-align:center}
-  .kpi table{border-collapse:separate;border-spacing:6px;margin:0 auto}
-  .kpi th{background:#ebedf0;color:#333;padding:.35rem .6rem;border-radius:8px}
-  .kpi td{background:#f7f7f9;padding:.35rem .6rem;border-radius:8px;font-variant-numeric:tabular-nums}
-  .kpiTable { border-collapse: separate; border-spacing: 6px; margin: 0 auto; }
-  .kpiTable th, .kpiTable td {
-    background:#f7f7f9; padding:.45rem .6rem; border-radius:8px;
-    font-variant-numeric: tabular-nums;
-    text-align: right; white-space: nowrap;
+
+  /* ===== wrapping table (two-row blocks) ===== */
+  .kpiBlock{ width:100% }
+  .kpiTable{ width:100%; border-collapse:separate; border-spacing:6px; table-layout:auto }
+  .labelPill{
+    background:#ebedf0; color:#333;
+    padding:.32rem .48rem; border-radius:8px; white-space:nowrap;
+    font-size:12px; text-align:left;
   }
-.kpiTable th.label { background:#ebedf0; color:#333; text-align:left; }
-  .debug{margin-top:6px;background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;flex:0 0 110px;display:none}
+  .cellPill{
+    background:#f7f7f9; padding:.28rem .40rem; border-radius:8px;
+    text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap;
+    font-size:12px;
+  }
+
+  /* Debug */
+  .debug{background:#f7f7f9;border-radius:10px;padding:6px;overflow:auto;display:none}
   pre{margin:0;font-size:.82rem}
 </style>
 </head>
 <body>
-<div class="app">
+<div class="app-shell">
   <div class="wrap">
     <div class="title" id="title">App 12: Years to ruin when spending yearly from given retirement savings</div>
     <div class="subtitle" id="subtitle">Development of wealth with constant yearly spending</div>
@@ -96,27 +127,28 @@
       <div class="panel right">
         <div class="chartWrap"><canvas id="line"></canvas></div>
 
-          <div class="kpi">
-            <table class="kpiTable" id="kpiTableAdd3">
+        <div class="kpiBlock" id="kpiTableWrap">
+          <table class="kpiTable">
+            <tbody id="kpiBody">
               <tr id="add3RowHeader">
-                <th class="label" id="kYearsHdr">Time since entering retirement phase (years):</th>
-                <!-- dynamic year cells -->
+                <th class="labelPill" id="kYearsHdr">Time since entering retirement phase (years):</th>
               </tr>
-              <tr id="add2RowCounts">
-                <th class="label" id="kRuinsHdr">Number of ruins after N years:</th>
-                <!-- dynamic count cells -->
+              <tr id="add3RowCounts">
+                <th class="labelPill" id="kRuinsHdr">Number of ruins after N years:</th>
               </tr>
-            </table>
-          </div>
+            </tbody>
+          </table>
+        </div>
 
         <div class="debug" id="debugBox"><pre id="debug">Waiting…</pre></div>
       </div>
     </div>
   </div>
+  <div class="app-shell__footer">© 2025 by Dr. S. Stöckl</div>
 </div>
 
 <script type="module">
-  // URL params (incl. seed like add1)
+  // URL params
   const params=new URLSearchParams(location.search);
   const lang =(params.get("lang") || "en_EN").toLowerCase();
   const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
@@ -153,67 +185,91 @@
   // UI
   const spendEl=spend, wealthEl=wealth, muEl=mu, volEl=vol;
   const spendLbl=spendLabel, wealthLbl=wealthLabel, muLbl=muLabel, volLbl=volLabel;
-  const yearsCell=document.getElementById("yearsRow");
-  const ruinsCell=document.getElementById("ruinsRow");
-  const dbgEl=document.getElementById("debug");
   const fmt=(x,opts={})=>Number(x).toLocaleString(undefined,{maximumFractionDigits:0,...opts});
   const pct=x=>(parseFloat(x)*100).toFixed(2)+"%";
-  const log=x=>{ if(debug) dbgEl.textContent=typeof x==="string"?x:JSON.stringify(x,null,2); };
+  const log=x=>{ if(debug) document.getElementById("debug").textContent=typeof x==="string"?x:JSON.stringify(x,null,2); };
 
   function refresh(){
-    spendLbl.textContent=fmt(spendEl.value,{maximumFractionDigits:0});
-    wealthLbl.textContent=fmt(wealthEl.value,{maximumFractionDigits:0});
+    spendLbl.textContent=fmt(spendEl.value);
+    wealthLbl.textContent=fmt(wealthEl.value);
     muLbl.textContent=pct(muEl.value);
     volLbl.textContent=pct(volEl.value);
   } refresh();
 
-  // Chart (multi-line)
+  // Chart
   const COLORS=["#000","#9e9e9e","#1976d2","#ff9800","#7b1fa2","#2e7d32","#c2185b","#455a64","#f57c00","#512da8"];
   const ctx=document.getElementById("line").getContext("2d");
   const line=new Chart(ctx,{type:"line",data:{labels:[],datasets:[]},
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      scales:{ x:{title:{display:true,text:"N"}}, y:{beginAtZero:true,title:{display:true,text:"Value"},ticks:{callback:v=>fmt(v)}}},
-      elements:{point:{radius:2}},
-      plugins:{legend:{display:false}}
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{x:{title:{display:true,text:"N"}},y:{beginAtZero:true,title:{display:true,text:"Value"},ticks:{callback:v=>fmt(v)}}},
+      elements:{point:{radius:2}}, plugins:{legend:{display:false}}
     }});
-
   function drawPaths(t, paths){
     line.data.labels=t.map(String);
-    line.data.datasets = paths.map((row,i)=>({
-      label:"path"+(i+1),
-      data:row,
-      borderColor:COLORS[i%COLORS.length],
-      backgroundColor:COLORS[i%COLORS.length],
-      tension:0.15,
-      fill:false
+    line.data.datasets=paths.map((row,i)=>({
+      label:"path"+(i+1), data:row,
+      borderColor:COLORS[i%COLORS.length], backgroundColor:COLORS[i%COLORS.length],
+      tension:0.15, fill:false
     }));
     line.update();
   }
 
-  function renderInlineCells(el, arr){
-    el.innerHTML = (arr||[]).map(v=>`<span style="background:#f7f7f9;border-radius:8px;padding:.35rem .6rem;margin-right:6px;display:inline-block">${fmt(v)}</span>`).join("");
+  // ===== wrapping two-row table, sorted by year =====
+  const CELL_MIN=80, CELL_GAP=12, LABEL_EST=240; // ruin table has longer label
+  function columnsPerRow(){
+    const wrap = document.getElementById("kpiTableWrap");
+    const w = wrap.clientWidth || 600;
+    const avail = Math.max(200, w - LABEL_EST);
+    return Math.max(1, Math.min(12, Math.floor(avail / (CELL_MIN + CELL_GAP))));
   }
-  
-  function renderKpiTableAdd3(years, counts) {
-    const hdr = document.getElementById("add2RowHeader");
-    const cnt = document.getElementById("add2RowCounts");
-    // keep first cell (the label), remove the rest
-    hdr.querySelectorAll("td").forEach(td => td.remove());
-    cnt.querySelectorAll("td").forEach(td => td.remove());
-    (years || []).forEach(y => {
-      const td = document.createElement("td"); td.textContent = Number(y).toLocaleString(); hdr.appendChild(td);
-    });
-    (counts || []).forEach(v => {
-      const td = document.createElement("td"); td.textContent = Number(v).toLocaleString(); cnt.appendChild(td);
-    });
+  function renderRuinsTable(years, counts){
+    const tbody = document.getElementById("kpiBody");
+    tbody.innerHTML = "";
+
+    // pair, filter finite, sort by year asc
+    const pairs=[];
+    const L = Math.min(years?.length||0, counts?.length||0);
+    for(let i=0;i<L;i++){
+      const y = Number(years[i]), c = Number(counts[i]);
+      if (Number.isFinite(y) && Number.isFinite(c)) pairs.push({y,c});
+    }
+    pairs.sort((a,b)=>a.y-b.y);
+
+    const cols = columnsPerRow();
+    for(let i=0;i<pairs.length;i+=cols){
+      const slice = pairs.slice(i, i+cols);
+
+      const tr1=document.createElement("tr");
+      const th1=document.createElement("th");
+      th1.className="labelPill"; th1.textContent=T.kYearsHdr;
+      tr1.appendChild(th1);
+      slice.forEach(({y})=>{
+        const td=document.createElement("td");
+        td.className="cellPill"; td.textContent=fmt(y);
+        tr1.appendChild(td);
+      });
+      tbody.appendChild(tr1);
+
+      const tr2=document.createElement("tr");
+      const th2=document.createElement("th");
+      th2.className="labelPill"; th2.textContent=T.kRuinsHdr;
+      tr2.appendChild(th2);
+      slice.forEach(({c})=>{
+        const td=document.createElement("td");
+        td.className="cellPill"; td.textContent=fmt(c);
+        tr2.appendChild(td);
+      });
+      tbody.appendChild(tr2);
+    }
   }
+  window.addEventListener("resize", ()=>{
+    if (window._ruinsCache) renderRuinsTable(window._ruinsCache.y, window._ruinsCache.c);
+  });
 
   // WebR
   import { WebR } from "https://webr.r-wasm.org/latest/webr.mjs";
   const webr=new WebR();
 
-  // small helpers to read WebR list/matrix structures
   const getListElem=(obj,name)=>{
     if (!obj) return undefined;
     if (obj[name]!==undefined) return obj[name];
@@ -243,6 +299,7 @@
             w0 = +wealthEl.value,
             mu = +muEl.value,
             sg = +volEl.value;
+
       const r = await webr.evalR(`
         out <- uadd3(
           spend_real=${s}, wealth0=${w0}, mu_real=${mu}, vol_real=${sg},
@@ -254,29 +311,28 @@
       const results=getListElem(root,"results") || root.results;
 
       const tArr   = vec(getListElem(results,"t"));
-      const qYears = vec(getListElem(results,"table_years"));
-      const qCnt   = vec(getListElem(results,"table_cum_ruins"));
+      const years  = vec(getListElem(results,"table_years"));
+      const counts = vec(getListElem(results,"table_cum_ruins"));
       const pathsO = getListElem(results,"paths");
       const flat   = vec(pathsO);
 
-      // dimensions (try dim; else from tArr length)
+      // rebuild paths (column-major)
       let nrow=0, ncol=0;
-      if (pathsO && pathsO.dim) { const d=vec(pathsO.dim); if (d.length===2){ nrow=d[0]; ncol=d[1]; } }
+      if (pathsO && pathsO.dim){ const d=vec(pathsO.dim); if(d.length===2){ nrow=d[0]; ncol=d[1]; } }
       if ((!nrow||!ncol) && tArr.length>0 && flat.length%tArr.length===0){ ncol=tArr.length; nrow=flat.length/ncol; }
-
       const paths=[];
       if (nrow>0 && ncol>0 && flat.length===nrow*ncol){
-        for(let r=0;r<nrow;r++){
-          const row=[];
-          for(let c=0;c<ncol;c++){ row.push( flat[r + c*nrow] ); }
+        for(let rI=0;rI<nrow;rI++){
+          const row=[]; for(let cI=0;cI<ncol;cI++){ row.push( flat[rI + cI*nrow] ); }
           paths.push(row);
         }
       }
 
       drawPaths(tArr, paths);
-      renderKpiTableAdd3(qYears, qCnt);
+      window._ruinsCache = {y: years, c: counts};
+      renderRuinsTable(years, counts);
 
-      if (debug) log({tLen:tArr.length,nPaths:paths.length,rowLen:paths[0]?.length||0,years:qYears,counts:qCnt});
+      if (debug) log({tLen:tArr.length, nPaths:paths.length, years, counts});
     }catch(e){
       log("Compute error: "+(e?.message||e));
     }
@@ -284,6 +340,7 @@
 
   document.getElementById("compute").addEventListener("click", compute);
   [spendEl,wealthEl,muEl,volEl].forEach(el=>el.addEventListener("input", compute));
+
   await init(); await compute();
 </script>
 </body>
