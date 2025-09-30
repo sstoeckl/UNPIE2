@@ -219,36 +219,44 @@
   }
 
   function renderKPITable(wealthArray, convRate){
-    const tbody = $("kpiBody");
+    const tbody = document.getElementById("kpiBody");
     tbody.innerHTML = "";
-    const cols = columnsPerRow();
-    for (let i=0; i<wealthArray.length; i += cols){
-      const slice = wealthArray.slice(i, i+cols);
-
+  
+    // 1) sort ascending (numeric), ignore non-finite
+    const values = wealthArray
+      .map(Number)
+      .filter(Number.isFinite)
+      .sort((a, b) => a - b);
+  
+    // 2) chunk into blocks that fit the width
+    const cols = columnsPerRow(); // your existing helper
+    for (let i = 0; i < values.length; i += cols) {
+      const slice = values.slice(i, i + cols);
+  
       // row 1: Future value + numbers
       const tr1 = document.createElement("tr");
       const th1 = document.createElement("th");
       th1.className = "labelPill";
       th1.textContent = "Future value of savings (real):";
       tr1.appendChild(th1);
-      slice.forEach(v=>{
-        const td=document.createElement("td");
-        td.className="cellPill";
-        td.textContent=fmt(v);
+      slice.forEach(v => {
+        const td = document.createElement("td");
+        td.className = "cellPill";
+        td.textContent = fmt(v);
         tr1.appendChild(td);
       });
       tbody.appendChild(tr1);
-
+  
       // row 2: Lifelong pension + aligned numbers
       const tr2 = document.createElement("tr");
       const th2 = document.createElement("th");
       th2.className = "labelPill";
       th2.textContent = "Lifelong pension (real):";
       tr2.appendChild(th2);
-      slice.forEach(v=>{
-        const td=document.createElement("td");
-        td.className="cellPill";
-        td.textContent=fmt(convRate * v);
+      slice.forEach(v => {
+        const td = document.createElement("td");
+        td.className = "cellPill";
+        td.textContent = fmt(convRate * v);
         tr2.appendChild(td);
       });
       tbody.appendChild(tr2);
