@@ -295,8 +295,9 @@
 
       const r = await webr.evalR(`
         out <- uadd2(
-          pension_min=${pmin}, nper=${nper}, mu_real=${mu}, vol_real=${vol},
-          conv=${conv}, prob_ok=${prob},
+          pension_min=${pmin}, nper=${nper},
+          mu=${mu}, sigma=${vol},      # Achtung: LOG-Parameter wie im Original!
+          conv=${conv}, prob=${prob},
           n_scen=10000, n_show=10,
           seed=${seedVal!==null?seedVal:"NULL"}
         ); out
