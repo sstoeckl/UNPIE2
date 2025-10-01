@@ -20,8 +20,8 @@ ucase5 <- function(pmt_real, nper, rate, inflation) {
   fv_nominal <- fv_real * (1 + inflation)^nper
   
   # sum of nominal payments (just index the stream, no interest)
-  sum_nominal <- if (inflation == 0) pmt_real * nper else
-    pmt_real * ((1 + inflation)^nper - 1) / inflation
+  sum_nominal <- if (inflation == 0) {pmt_real * nper 
+    } else {pmt_real * ((1 + inflation)^(nper+1) - 1) / inflation}
   
   list(
     ok = TRUE,
