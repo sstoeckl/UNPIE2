@@ -313,7 +313,8 @@
           wealth0=${w0}, min_years=${myn}, prob_ok=${pr},
           mu_real=${mu}, vol_real=${sg},
           nper=25, n_scen=10000, n_show=10,
-          seed=${seedVal!==null?seedVal:"NULL"}
+          seed=${seedVal!==null?seedVal:"NULL"},
+          ruin_rule="strict"
         ); out
       `);
 
