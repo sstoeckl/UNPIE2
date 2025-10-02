@@ -22,10 +22,9 @@ ucase7 <- function(pmt, nper, rate, inflation) {
   # PV of a growing annuity with growth g = inflation and first payment A1 = pmt*(1+inflation)
   if (abs(rate - inflation) < 1e-12) {
     # limit r == g: PV = A1 * n / (1 + r)
-    pv_required_real <- pmt * rr * nper
+    pv_required_real <- pmt / (1 + rr) * nper
   } else {
-    pv_required_real <- pmt * (1 + inflation) *
-      (1 - (rr)^nper) / (rate - inflation)
+    pv_required_real <- pmt * ((1 + rr)^nper - 1)/(rr * (1 + rr)^nper)
   }
   
   list(
