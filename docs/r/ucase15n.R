@@ -27,7 +27,7 @@ ucase15n <- function(x = 65, lambda = 0, m = 82.3, b = 11.4,
   t_med <- uniroot(f_med, lower = 1e-8, upper = 200, tol = 1e-10)$root
   
   # Exponential mortality rate matched to the GM median
-  mort_rate <- log(2) / t_med  # λ^exp
+  mort_rate <- round(log(2) / t_med, 4)  # λ^exp
   
   # Gamma-approx ruin probability (same form as in the original wrapper)
   shape <- (2 * log1p(r) + 4 * mort_rate) / (sigma^2 + mort_rate) - 1
