@@ -10,7 +10,7 @@ ucase9 <- function(spend_real, nper_save, nper_spend, rate, inflation) {
             is.numeric(nper_spend), is.numeric(rate), is.numeric(inflation))
   
   # real rate
-  rr <- (1 + rate) / (1 + inflation) - 1
+  rr <- round((1 + rate) / (1 + inflation) - 1, 4)
   
   # Required real wealth at retirement to fund real spending (PV of real annuity)
   wealth_req <- if (abs(rr) < 1e-12) spend_real * nper_spend
@@ -31,6 +31,7 @@ ucase9 <- function(spend_real, nper_save, nper_spend, rate, inflation) {
       inflation = inflation
     ),
     results = list(
+      rate_real = rr,
       required_wealth_at_retirement_real = wealth_req,
       required_savings_real = save_real
     )
