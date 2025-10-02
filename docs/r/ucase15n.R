@@ -24,15 +24,15 @@ ucase15n <- function(x = 65, lambda = 0, m = 82.3, b = 11.4,
   
   # Median remaining lifetime t_med: S(t_med) = 0.5
   f_med <- function(t) S_gm(t) - 0.5
-  t_med <- uniroot(f_med, lower = 1e-8, upper = 200, tol = 1e-10)$root
+  t_med <- round(uniroot(f_med, lower = 1e-8, upper = 200, tol = 1e-10)$root,4)
   
   # Exponential mortality rate matched to the GM median
   mort_rate <- round(log(2) / t_med, 4)  # λ^exp
   
   # Gamma-approx ruin probability (same form as in the original wrapper)
-  shape <- (2 * log1p(r) + 4 * mort_rate) / (sigma^2 + mort_rate) - 1
-  scale <- (sigma^2 + mort_rate) / 2
-  prob_ruin <- pgamma(q = B / K, shape = shape, scale = scale)
+  shape <- round((2 * round(log1p(r),4) + 4 * mort_rate) / (sigma^2 + mort_rate) - 1,4)
+  scale <- round((sigma^2 + mort_rate) / 2,4)
+  prob_ruin <- round(pgamma(q = B / K, shape = shape, scale = scale),4)
   
   # Data for the plot: GM vs matched exponential survival
   t <- seq(0, chart_horizon_years, by = 1)
