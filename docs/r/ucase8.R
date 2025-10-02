@@ -10,7 +10,7 @@ ucase8 <- function(pmt_real_save, nper_save, nper_spend, rate, inflation) {
             is.numeric(nper_spend), is.numeric(rate), is.numeric(inflation))
   
   # real rate
-  rr <- (1 + rate) / (1 + inflation) - 1
+  round(rr <- (1 + rate) / (1 + inflation) - 1,4)
   
   # Future wealth at retirement in REAL CHF from constant REAL savings
   fv_real <- if (abs(rr) < 1e-12) pmt_real_save * nper_save
@@ -30,6 +30,7 @@ ucase8 <- function(pmt_real_save, nper_save, nper_spend, rate, inflation) {
       inflation = inflation
     ),
     results = list(
+      rate_real = rr,
       fv_real_at_retirement = fv_real,
       spend_real_during_retirement = spend_real
     )
