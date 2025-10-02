@@ -16,19 +16,23 @@ ucase7 <- function(pmt, nper, rate, inflation) {
   # -> index with exponent t (not t-1), so inflation already hits the first payment
   expense_real_nominal_path <- pmt * (1 + inflation)^(t)
   
+  # real rate
+  rr <- round((1 + rate) / (1 + inflation) - 1,4)
+  
   # PV of a growing annuity with growth g = inflation and first payment A1 = pmt*(1+inflation)
   if (abs(rate - inflation) < 1e-12) {
     # limit r == g: PV = A1 * n / (1 + r)
-    pv_required_real <- pmt * (1 + inflation) * nper / (1 + rate)
+    pv_required_real <- pmt * rr * nper
   } else {
     pv_required_real <- pmt * (1 + inflation) *
-      (1 - ((1 + inflation) / (1 + rate))^nper) / (rate - inflation)
+      (1 - (rr)^nper) / (rate - inflation)
   }
   
   list(
     ok = TRUE,
     inputs = list(pmt = pmt, nper = nper, rate = rate, inflation = inflation),
     results = list(
+      rate_real = rr,
       pv_required_nominal = pv_required_nominal,
       pv_required_real = pv_required_real,
       t = t,

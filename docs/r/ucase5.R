@@ -10,8 +10,7 @@ ucase5 <- function(pmt_real, nper, rate, inflation) {
   # nominal path of each year's payment (indexing previous real pmt by inflation)
   pmt_nominal_t <- pmt_real * (1 + inflation)^(t)
   
-  # real rate
-  rr <- round((1 + rate) / (1 + inflation) - 1,4)
+
   
   # FV in real CHF (ordinary annuity end-of-period at real rate)
   fv_real <- if (rr == 0) pmt_real * nper else pmt_real * ((1 + rr)^nper - 1) / rr
