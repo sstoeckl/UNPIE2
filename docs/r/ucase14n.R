@@ -15,7 +15,8 @@ ucase14n <- function(x = 65, lambda = 0, m = 82.3, b = 11.4,
                      chart_max_age = 120) {
   
   # Real continuous discount rate
-  delta_real <- log1p(r) - log1p(inflation)  # ln(1+r) - ln(1+i)
+  delta_real <- round(log1p(r) - log1p(inflation),4)  # ln(1+r) - ln(1+i)
+  mu <- round(log1p(r),4)  # ln(1+r)
   
   # Survival function S(t | x) under Gompertz–Makeham
   S <- function(t) {
@@ -31,8 +32,14 @@ ucase14n <- function(x = 65, lambda = 0, m = 82.3, b = 11.4,
     # Upper bound large enough for numerical convergence
     stats::integrate(f, lower = 0, upper = 200, rel.tol = 1e-10, abs.tol = 0)$value
   })(delta_real)
+  annuity_nominal <- (function(delta) {
+    f <- function(t) exp(-delta * t) * S(t)
+    # Upper bound large enough for numerical convergence
+    stats::integrate(f, lower = 0, upper = 200, rel.tol = 1e-10, abs.tol = 0)$value
+  })(mu)
   
   fair_rate <- if (is.finite(annuity_real) && annuity_real > 0) 1 / annuity_real else NA_real_
+  fair_rate_nominal <- if (is.finite(annuity_nominal) && annuity_nominal > 0) 1 / annuity_nominal else NA_real_
   
   # Data for the plot (survival vs. age)
   max_age <- max(x, chart_max_age)
@@ -44,7 +51,9 @@ ucase14n <- function(x = 65, lambda = 0, m = 82.3, b = 11.4,
   list(
     results = list(
       annuity_factor = annuity_real,
+      annuity_factor_nominal = annuity_nominal,
       fair_conversion_rate = fair_rate,  # single (real) rate, as in original wrapper
+      fair_conversion_rate_nominal = fair_rate_nominal,
       ages = ages,                       # for plotting
       survival = surv                    # for plotting
     )
