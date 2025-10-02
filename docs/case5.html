@@ -259,7 +259,7 @@
       const t=arr(R.t), realPath=arr(R.contrib_real_path), nomPath=arr(R.contrib_nominal_path);
       const sumNom=num(R.sum_nominal), fvNom=num(R.fv_nominal), fvReal=num(R.fv_real);
 
-      sumOut.textContent   = fmt(sumNom,{maximumFractionDigits:0});
+      sumOut.textContent   = fmt(sumNom);
       fvNomOut.textContent = fmt(fvNom);
       fvRealOut.textContent= fmt(fvReal);
       drawChart(t, realPath, nomPath, sumNom, fvNom, fvReal);

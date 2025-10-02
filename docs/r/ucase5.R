@@ -27,6 +27,7 @@ ucase5 <- function(pmt_real, nper, rate, inflation) {
     ok = TRUE,
     inputs = list(pmt_real = pmt_real, nper = nper, rate = rate, inflation = inflation),
     results = list(
+      rate_real = rr,
       fv_nominal = fv_nominal,
       fv_real = fv_real,
       sum_nominal = sum_nominal,
