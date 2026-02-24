@@ -150,14 +150,14 @@
 <script type="module">
   // URL params
   const params=new URLSearchParams(location.search);
-  const lang =(params.get("lang") || "en_EN").toLowerCase();
+  const lang =(params.get("lang") || "en").toLowerCase();
   const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
   const seedQS=params.get("seed");
   const seedVal = seedQS ? parseInt(seedQS,10) : null;
 
   // i18n
   const I18N={
-    en_en:{title:"App 12: Years to ruin when spending yearly from given retirement savings",
+    en:{title:"App 12: Years to ruin when spending yearly from given retirement savings",
       subtitle:"Development of wealth with constant yearly spending",
       gSpend:"Yearly spending (real)", lSpend:"Spending per year",
       gWealth:"Wealth at retirement", lWealth:"Wealth",
@@ -166,7 +166,7 @@
       btn:"Recalculate",
       kYearsHdr:"Time since entering retirement phase (years):",
       kRuinsHdr:"Number of ruins after N years:"},
-    de_de:{title:"App 12: Jahre bis zur Zahlungsunfähigkeit bei jährlichen Ausgaben aus gegebenem Ruhestandsvermögen",
+    de:{title:"App 12: Jahre bis zur Zahlungsunfähigkeit bei jährlichen Ausgaben aus gegebenem Ruhestandsvermögen",
       subtitle:"Vermögensentwicklung bei konstanten jährlichen Ausgaben",
       gSpend:"Jährliche Ausgaben (real)", lSpend:"Ausgaben pro Jahr",
       gWealth:"Vermögen bei Pensionseintritt", lWealth:"Vermögen",
@@ -176,7 +176,7 @@
       kYearsHdr:"Zeit seit Beginn der Rentenphase (Jahre):",
       kRuinsHdr:"Anzahl Ruinen nach N Jahren:"}
   };
-  const T=I18N[lang]||I18N.en_en;
+  const T=I18N[lang]||I18N.en;
   ["title","subtitle","gSpend","lSpend","gWealth","lWealth","gRet","lMu","gVol","lVol","kYearsHdr","kRuinsHdr"]
     .forEach(id=>document.getElementById(id).textContent=T[id]);
   document.getElementById("compute").textContent=T.btn;

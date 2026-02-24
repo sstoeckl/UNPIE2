@@ -152,23 +152,23 @@
 <script type="module">
   // URL params
   const params=new URLSearchParams(location.search);
-  const lang=(params.get("lang")||"en_EN").toLowerCase();
+  const lang=(params.get("lang")||"en").toLowerCase();
   const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
 
   // i18n
   const I18N={
-    en_en:{title:"App 2: Future value (nominal & real) of single savings payment",
+    en:{title:"App 2: Future value (nominal & real) of single savings payment",
       gAmt:"Single savings payment",lAmt:"Amount",gHor:"Time horizon (years)",lYears:"Years",
       gRates:"Rates",lRate:"Interest rate",lInfl:"Inflation rate",btn:"Compute",
       sInit:"Initial:",sNom:"Future value (nominal):",sReal:"Future value (real):",
       legInit:"Single savings payment made now",legNom:"Future value (nominal)",legReal:"Future value (real)"},
-    de_de:{title:"App 2: Zukünftiger Wert (nominal und real) einer einmaligen Sparzahlung",
+    de:{title:"App 2: Zukünftiger Wert (nominal und real) einer einmaligen Sparzahlung",
       gAmt:"Einmalige Sparzahlung",lAmt:"Betrag",gHor:"Zeitraum (Jahre)",lYears:"Jahre",
       gRates:"Sätze",lRate:"Zinssatz",lInfl:"Inflationsrate",btn:"Berechnen",
       sInit:"Einmalig:",sNom:"Zukünftiger Wert (nominal):",sReal:"Zukünftiger Wert (real):",
       legInit:"Einmalige (heutige) Sparzahlung",legNom:"Zukünftiger Wert (nominal)",legReal:"Zukünftiger Wert (real)"}
   };
-  const T=I18N[lang]||I18N.en_en;
+  const T=I18N[lang]||I18N.en;
   ["title","gAmt","lAmt","gHor","lYears","gRates","lRate","lInfl","sInit","sNom","sReal","legInit","legNom","legReal"]
     .forEach(id=>document.getElementById(id).textContent=T[id]);
   document.getElementById("compute").textContent=T.btn;

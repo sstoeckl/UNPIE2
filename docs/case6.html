@@ -138,24 +138,24 @@
 <script type="module">
   // Params & i18n
   const params=new URLSearchParams(location.search);
-  const lang =(params.get("lang") || "en_EN").toLowerCase();
+  const lang =(params.get("lang") || "en").toLowerCase();
   const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
 
   const I18N={
-    en_en:{title:"App 6: Required starting capital for constant periodic expenses",
+    en:{title:"App 6: Required starting capital for constant periodic expenses",
       gPmt:"Periodic expenses", lPmt:"Expense per year",
       gHor:"Time horizon (years)", lYears:"Years",
       gRate:"Interest rate", lRate:"Rate (per year)", btn:"Compute",
       legSum:"Sum of periodic expenses", legPV:"Required starting capital", legPmt:"Periodic expense",
       kpiSumLbl:"Sum of periodic expenses:", kpiPvLbl:"Required starting capital:"},
-    de_de:{title:"App 6: Notwendiges Ausgangsvermögen zur Finanzierung konstanter periodischer Ausgaben",
+    de:{title:"App 6: Notwendiges Ausgangsvermögen zur Finanzierung konstanter periodischer Ausgaben",
       gPmt:"Periodische Ausgaben", lPmt:"Ausgabe pro Jahr",
       gHor:"Zeitraum (Jahre)", lYears:"Jahre",
       gRate:"Zinssatz", lRate:"Zinssatz (pro Jahr)", btn:"Berechnen",
       legSum:"Summe der periodischen Ausgaben", legPV:"Notwendiges Ausgangsvermögen", legPmt:"Periodische Ausgabe",
       kpiSumLbl:"Summe der periodischen Ausgaben:", kpiPvLbl:"Notwendiges Ausgangsvermögen:"}
   };
-  const T=I18N[lang]||I18N.en_en;
+  const T=I18N[lang]||I18N.en;
   ["title","gPmt","lPmt","gHor","lYears","gRate","lRate","legSum","legPV","legPmt","kpiSumLbl","kpiPvLbl"]
     .forEach(id=>document.getElementById(id).textContent=T[id]);
   document.getElementById("compute").textContent=T.btn;

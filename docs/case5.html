@@ -146,19 +146,19 @@
 <script type="module">
   // Params
   const params=new URLSearchParams(location.search);
-  const lang =(params.get("lang") || "en_EN").toLowerCase();
+  const lang =(params.get("lang") || "en").toLowerCase();
   const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
 
   // i18n
   const I18N={
-    en_en:{title:"App 5: Future value (nominal & real) of constant (real) yearly savings payments",
+    en:{title:"App 5: Future value (nominal & real) of constant (real) yearly savings payments",
       gPmt:"Yearly savings payments (real)", lPmt:"Payment per year",
       gHor:"Time horizon (years)", lYears:"Years",
       gRates:"Rates", lRate:"Interest rate", lInfl:"Inflation rate", btn:"Compute",
       legRealPmt:"Periodic savings payments", legNomPmt:"Yearly savings payments (increasing to account for inflation)",
       legSumNom:"Sum of all savings payments (nominal)", legFvNom:"Future value (nominal)", legFvReal:"Future value (real)",
       kpiSumLbl:"Sum of all savings payments (nominal):", kpiFvNomLbl:"Future value (nominal):", kpiFvRealLbl:"Future value (real):"},
-    de_de:{title:"App 5: Zukünftiger Wert (nominal und real) von konstanten (realen) jährlichen Sparzahlungen",
+    de:{title:"App 5: Zukünftiger Wert (nominal und real) von konstanten (realen) jährlichen Sparzahlungen",
       gPmt:"Jährliche Sparzahlungen (real)", lPmt:"Sparzahlung pro Jahr",
       gHor:"Zeitraum (Jahre)", lYears:"Jahre",
       gRates:"Sätze", lRate:"Zinssatz", lInfl:"Inflationsrate", btn:"Berechnen",
@@ -166,7 +166,7 @@
       legSumNom:"Summe aller Sparzahlungen (nominal)", legFvNom:"Zukünftiger Wert (nominal)", legFvReal:"Zukünftiger Wert (real)",
       kpiSumLbl:"Summe aller Sparzahlungen (nominal):", kpiFvNomLbl:"Zukünftiger Wert (nominal):", kpiFvRealLbl:"Zukünftiger Wert (real):"}
   };
-  const T=I18N[lang]||I18N.en_en;
+  const T=I18N[lang]||I18N.en;
   ["title","gPmt","lPmt","gHor","lYears","gRates","lRate","lInfl",
    "legRealPmt","legNomPmt","legSumNom","legFvNom","legFvReal",
    "kpiSumLbl","kpiFvNomLbl","kpiFvRealLbl"].forEach(id=>document.getElementById(id).textContent=T[id]);

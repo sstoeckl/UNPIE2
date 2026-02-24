@@ -161,14 +161,14 @@
 <script type="module">
   // URL params (+ seed)
   const params = new URLSearchParams(location.search);
-  const lang   = (params.get("lang")  || "en_EN").toLowerCase();
+  const lang   = (params.get("lang")  || "en").toLowerCase();
   const debug  = (params.get("debug") || "FALSE").toUpperCase() === "TRUE";
   const seedQS = params.get("seed");
   const seedVal = seedQS ? parseInt(seedQS,10) : null;
 
   // i18n
   const I18N={
-    en_en:{title:"App 13: Maximum periodic spending possible to exceed specified minimum years to ruin with probability p",
+    en:{title:"App 13: Maximum periodic spending possible to exceed specified minimum years to ruin with probability p",
       subtitle:"Maximum admissible (real) yearly spending",
       gWealth:"Wealth at retirement", lWealth:"Wealth",
       gMinYrs:"Minimum years to ruin", lMinYrs:"Years",
@@ -178,7 +178,7 @@
       btn:"Recalculate",
       kYearsHdr:"Time since entering retirement phase (years):",
       kRuinsHdr:"Number of ruins after N years:"},
-    de_de:{title:"App 13: Maximale periodische Ausgaben, um eine vorgegebene Mindestzahl Jahre bis zur Zahlungsunfähigkeit mit Wahrscheinlichkeit p zu überschreiten",
+    de:{title:"App 13: Maximale periodische Ausgaben, um eine vorgegebene Mindestzahl Jahre bis zur Zahlungsunfähigkeit mit Wahrscheinlichkeit p zu überschreiten",
       subtitle:"Maximal zulässige (reale) Jahresausgaben",
       gWealth:"Vermögen bei Pensionseintritt", lWealth:"Vermögen",
       gMinYrs:"Mindestjahre bis zur Zahlungsunfähigkeit", lMinYrs:"Jahre",
@@ -189,7 +189,7 @@
       kYearsHdr:"Zeit seit Beginn der Rentenphase (Jahre):",
       kRuinsHdr:"Anzahl Ruinen nach N Jahren:"}
   };
-  const T = I18N[lang] || I18N.en_en;
+  const T = I18N[lang] || I18N.en;
 
   // safe injection
   ["title","gWealth","lWealth","gMinYrs","lMinYrs","gProb","lProb","gRet","lMu","gVol","lVol","kYearsHdr","kRuinsHdr"]

@@ -145,21 +145,21 @@
 <script type="module">
   // URL params
   const params=new URLSearchParams(location.search);
-  const lang=(params.get("lang")||"en_EN").toLowerCase();
+  const lang=(params.get("lang")||"en").toLowerCase();
   const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
 
   // i18n
   const I18N={
-    en_en:{title:"App 1: Future value of a single contribution",
+    en:{title:"App 1: Future value of a single contribution",
       gAmt:"Single contribution",lAmt:"Amount",gHor:"Horizon (years)",lYears:"Years",
       gRate:"Interest rate",lRate:"Rate (per year)",btn:"Compute",
       sInit:"Initial:",sFV:"Future value:",legInit:"Initial contribution",legFV:"Future value at T"},
-    de_de:{title:"App 1: Zukünftiger Wert einer einmaligen Sparzahlung",
+    de:{title:"App 1: Zukünftiger Wert einer einmaligen Sparzahlung",
       gAmt:"Einmalige Sparzahlung",lAmt:"Betrag",gHor:"Zeitraum (Jahre)",lYears:"Jahre",
       gRate:"Zinssatz",lRate:"Zinssatz (pro Jahr)",btn:"Berechnen",
       sInit:"Einmalig:",sFV:"Zukünftiger Wert:",legInit:"Einmalige (heutige) Sparzahlung",legFV:"Zukünftiger Wert dieser Sparzahlung"}
   };
-  const T=I18N[lang]||I18N.en_en;
+  const T=I18N[lang]||I18N.en;
   ["title","gAmt","lAmt","gHor","lYears","gRate","lRate","sInit","sFV","legInit","legFV"].forEach(id=>document.getElementById(id).textContent=T[id]);
   document.getElementById("compute").textContent=T.btn;
   document.getElementById("debugBox").style.display=debug?"block":"none";

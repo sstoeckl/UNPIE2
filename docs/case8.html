@@ -129,12 +129,12 @@
 <script type="module">
   // URL params
   const params=new URLSearchParams(location.search);
-  const lang=(params.get("lang")||"en_EN").toLowerCase();
+  const lang=(params.get("lang")||"en").toLowerCase();
   const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
 
   // i18n
   const I18N={
-    en_en:{
+    en:{
       title:"App 8: Real yearly spending financed by given (real) yearly savings",
       gPmt:"Yearly (real) savings payments", lPmt:"Payment per year",
       gHorSave:"Time horizon for savings (years)", lSave:"Years",
@@ -144,7 +144,7 @@
       legSave:"Yearly (real) savings while working", legSpend:"Yearly (real) spending during retirement",
       lblFV:"Future wealth at end of savings phase (real) available to finance (real) yearly spending during retirement:"
     },
-    de_de:{
+    de:{
       title:"App 8: Reale jährliche Ausgaben finanziert durch gegebene (reale) jährliche Ersparnisse",
       gPmt:"Jährliche (reale) Sparzahlungen", lPmt:"Zahlung pro Jahr",
       gHorSave:"Sparhorizont (Jahre)", lSave:"Jahre",
@@ -156,7 +156,7 @@
       lblFV:"Zukünftiges Vermögen am Ende der Sparphase (real) zur Finanzierung der (realen) jährlichen Ausgaben im Ruhestand:"
     }
   };
-  const T=I18N[lang]||I18N.en_en;
+  const T=I18N[lang]||I18N.en;
   ["title","gPmt","lPmt","gHorSave","lSave","gHorSpend","lSpend","gRates","lRate","lInfl",
    "sSave","sSpend","legSave","legSpend","lblFV"].forEach(id=>document.getElementById(id).textContent=T[id]);
   document.getElementById("compute").textContent=T.btn;

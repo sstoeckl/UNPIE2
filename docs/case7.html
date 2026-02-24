@@ -144,18 +144,18 @@
 <script type="module">
   // Params & i18n
   const params=new URLSearchParams(location.search);
-  const lang =(params.get("lang") || "en_EN").toLowerCase();
+  const lang =(params.get("lang") || "en").toLowerCase();
   const debug=(params.get("debug")||"FALSE").toUpperCase()==="TRUE";
 
   const I18N={
-    en_en:{title:"App 7: Required wealth to finance constant (nominal/real) yearly spending",
+    en:{title:"App 7: Required wealth to finance constant (nominal/real) yearly spending",
       gPmt:"Yearly spending (base, real)", lPmt:"Spending per year",
       gHor:"Time horizon (years)", lYears:"Years",
       gRates:"Rates", lRate:"Interest rate", lInfl:"Inflation rate", btn:"Compute",
       legPvNom:"Required wealth (nominal spending)", legPvReal:"Required wealth (real spending)",
       legNomFlat:"Yearly spending (constant nominal)", legNomIndexed:"Yearly spending (indexed for inflation)",
       kpiPvNomLbl:"Required wealth (nominal spending):", kpiPvRealLbl:"Required wealth (real spending):"},
-    de_de:{title:"App 7: Notwendiges Vermögen zur Finanzierung konstanter (nominal/real) jährlicher Ausgaben",
+    de:{title:"App 7: Notwendiges Vermögen zur Finanzierung konstanter (nominal/real) jährlicher Ausgaben",
       gPmt:"Jährliche Ausgaben (Basis, real)", lPmt:"Ausgaben pro Jahr",
       gHor:"Zeitraum (Jahre)", lYears:"Jahre",
       gRates:"Sätze", lRate:"Zinssatz", lInfl:"Inflationsrate", btn:"Berechnen",
@@ -163,7 +163,7 @@
       legNomFlat:"Jährliche Ausgaben (konstant nominal)", legNomIndexed:"Jährliche Ausgaben (inflationsindexiert)",
       kpiPvNomLbl:"Notwendiges Vermögen (nominale Ausgaben):", kpiPvRealLbl:"Notwendiges Vermögen (reale Ausgaben):"}
   };
-  const T=I18N[lang]||I18N.en_en;
+  const T=I18N[lang]||I18N.en;
   ["title","gPmt","lPmt","gHor","lYears","gRates","lRate","lInfl",
    "legPvNom","legPvReal","legNomFlat","legNomIndexed",
    "kpiPvNomLbl","kpiPvRealLbl"].forEach(id=>document.getElementById(id).textContent=T[id]);

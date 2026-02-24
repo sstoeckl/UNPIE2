@@ -141,22 +141,22 @@
 
 <script type="module">
   const params = new URLSearchParams(location.search);
-  const lang  = (params.get("lang") || "en_EN").toLowerCase();
+  const lang  = (params.get("lang") || "en").toLowerCase();
   const debug = (params.get("debug") || "FALSE").toUpperCase() === "TRUE";
 
   const I18N = {
-    en_en:{title:"App 3: Future value of constant periodic payments",
+    en:{title:"App 3: Future value of constant periodic payments",
       gPmt:"Periodic payments",lPmt:"Payment per year",gHor:"Time horizon (years)",lYears:"Years",
       gRate:"Interest rate",lRate:"Rate (per year)",btn:"Compute",
       legPmt:"Periodic payment",legSum:"Sum of periodic payments",legFV:"Future value",
       kpiSumLbl:"Sum of payments:",kpiFvLbl:"Future value:"},
-    de_de:{title:"App 3: Zukünftiger Wert konstanter periodischer Sparzahlungen",
+    de:{title:"App 3: Zukünftiger Wert konstanter periodischer Sparzahlungen",
       gPmt:"Periodische Sparzahlungen",lPmt:"Sparzahlung pro Jahr",gHor:"Zeitraum (Jahre)",lYears:"Jahre",
       gRate:"Zinssatz",lRate:"Zinssatz (pro Jahr)",btn:"Berechnen",
       legPmt:"Periodische Sparzahlung",legSum:"Summe der periodischen Sparzahlungen",legFV:"Zukünftiger Wert",
       kpiSumLbl:"Summe der periodischen Sparzahlungen:",kpiFvLbl:"Zukünftiger Wert:"}
   };
-  const T = I18N[lang] || I18N.en_en;
+  const T = I18N[lang] || I18N.en;
   ["title","gPmt","lPmt","gHor","lYears","gRate","lRate","legPmt","legSum","legFV","kpiSumLbl","kpiFvLbl"]
     .forEach(id=>document.getElementById(id).textContent=T[id]);
   document.getElementById("compute").textContent=T.btn;
